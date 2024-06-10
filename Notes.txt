@@ -1,0 +1,6 @@
+(Windows)
+To check DB is running:
+run services app and check postgres from list
+
+(Must add postgres to path environment variable in windows):
+can also run psql from cmd terminal to verify its running since psql talks to active DB

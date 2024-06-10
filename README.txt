@@ -4,6 +4,7 @@ then install these packages to run
 pip install pandas
 pip install openpyxl
 pip install SQLAlchemy
+pip install psycopg2
 
 DL and install postgres db:
 https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
