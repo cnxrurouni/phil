@@ -9,7 +9,7 @@ from models.models import create_models
 
 def connect_to_db():
   config = {'user': 'postgres',
-            'password': 'mother1!',
+            'password': '', # Enter your password from installation
             'host': '127.0.0.1',
             'port': '5432',
             'dbname': 'postgres'}
