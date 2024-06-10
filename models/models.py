@@ -27,7 +27,7 @@ class Volume(Base):
 
 def create_models():
   username = 'postgres'
-  password = 'mother1!'
+  password = ''
   host = '127.0.0.1'
   db = 'Finance'
 
