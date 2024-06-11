@@ -40,7 +40,3 @@ def run_migrations():
 
   # Create Tables Company and Volume in Finance DB
   create_models()
-
-
-# to test out creation, just uncomment this and run
-run_migrations()

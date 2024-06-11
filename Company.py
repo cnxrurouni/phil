@@ -86,7 +86,10 @@ class Z_SCORE(IntEnum):
 
 
 class Company:
-    def __INIT__():
+    def __INIT__(self):
+        self.name = ""
+        self.ticker = ""
+
         # left side data
         self.mrq_data = {}
         

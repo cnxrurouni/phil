@@ -33,3 +33,8 @@ command: \dt
  public | company | table | postgres
  public | volume  | table | postgres
 (2 rows)
+
+6/11/24 Updates:
+1. Had to re-create volume table because I forgot to make date column unique. Manually delete your volume table and re-run
+create_database.py script.
+2. Populating DB with companies and volume data from sheet2.xls

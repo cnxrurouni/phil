@@ -5,8 +5,8 @@ from Company import Company, MostRecentQuarter, InvestmentFirm, MRQ, KEY_METRICS
 DEBUG = 0
     
 
-def main():
-    sheet = pd.ExcelFile("sheet2.xls")
+def parse_excel_sheet(excel_file_path):
+    sheet = pd.ExcelFile(excel_file_path)
 
     # take only sheets that are stocks
     companies = [ticker for ticker in sheet.sheet_names if ticker.isupper() and ' ' not in ticker]
@@ -55,8 +55,9 @@ def main():
         except Exception as e:
             print (f'Error parsing sheet {company}')
             print(e)
-    
-        
+
+    return all_companies
+
 
 def get_mrq_data(df):
     # MRQ cell
@@ -270,7 +271,3 @@ def get_z_score_data(df):
     z_score['e'] = df.iloc[Z_SCORE.E, col]
     z_score['total'] = df.iloc[Z_SCORE.TOTAL, col]
     return z_score
-
-# main 
-if __name__ == '__main__':
-    main()

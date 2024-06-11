@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine, Date, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import DeclarativeBase, Session, Mapped, mapped_column
+from sqlalchemy import create_engine, Date, Float, ForeignKey, Integer, String, select
+from sqlalchemy.orm import DeclarativeBase, Session, Mapped, mapped_column, sessionmaker
+from parse_excel import parse_excel_sheet
 import datetime
 
 
@@ -21,7 +22,7 @@ class Volume(Base):
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   company_id: Mapped[int] = mapped_column(ForeignKey("company.id"))
   company_ticker: Mapped[str] = mapped_column(ForeignKey("company.name"))
-  date = mapped_column(Date, default=datetime.datetime.now().date())
+  date = mapped_column(Date, unique=True, default=datetime.datetime.now().date())
   count: Mapped[int] = mapped_column(Float, default=0.0)
 
 
@@ -39,25 +40,33 @@ def create_models():
   # Step 4: Create the database tables
   Base.metadata.create_all(engine)
 
-  '''
-  TODO: Populate data from excel sheet
   # Step 5: Insert data into the database
   Session = sessionmaker(bind=engine)
-  session = Session()
-  
-  # Example: Inserting a new user into the database
-  new_user = User(username='Sandy', email='sandy@gmail.com', password='cool-password')
-  session.add(new_user)
-  session.commit()
 
-  # Step 6: Query data from the database
-  # Example: Querying all users from the database
-  all_users = session.query(User).all()
+  companies = parse_excel_sheet("sheet2.xls")
 
-  # Example: Querying a specific user by their username
-  user = session.query(User).filter_by(username='Sandy').first()
+  with Session() as session:
+    # get volume Data
+    for ticker, obj in companies.items():
+      query = select(Company).where(Company.ticker == ticker)
+      result = session.execute(query)
 
-  # Step 7: Close the session
-  session.close()
-  '''
+      # if company doesn't exist in DB, create it
+      if result is None:
+        comp = Company(name=ticker, ticker=ticker)
+        session.add(comp)
+        session.commit()
+        query = select(Company).where(Company.ticker == ticker)
+        result = session.execute(query)
+
+      comp = result.mappings().first()["Company"]
+
+      for date, val in obj.volume:
+        query = select(Volume).where(Volume.company_ticker == comp.ticker, Volume.date ==date)
+        result = session.execute(query)
+        if result is None:
+          volume = Volume(company_id=comp.id, company_ticker=comp.ticker, date=date, count=val)
+          session.add(volume)
+
+      session.commit()
 
