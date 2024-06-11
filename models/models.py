@@ -31,7 +31,7 @@ class Volume(Base):
   )
 
 
-def create_models():
+def create_database_engine():
   username = 'postgres'
   password = ''
   host = '127.0.0.1'
@@ -41,6 +41,12 @@ def create_models():
 
   # Create an engine to connect to a postgres DB
   engine = create_engine(database_url)
+
+  return engine
+
+
+def create_models():
+  engine = create_database_engine()
 
   # Step 4: Create the database tables
   Base.metadata.create_all(engine)
