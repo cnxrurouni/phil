@@ -103,7 +103,7 @@ class Company:
     self.sales_etf = []
     self.st_dev = 0.0
     self.avg = 0.0
-    slef.cfo = []
+    self.cfo = []
     self.ni = []
     self.share_count = []
     self.last_price = 0.0

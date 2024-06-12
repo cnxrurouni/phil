@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy
 from src.Company import Company, MostRecentQuarter, InvestmentFirm, MRQ, KEY_METRICS, INPUT_VARIABLES, DERIVED_VARIABLES, Z_SCORE
 
 DEBUG = 0
@@ -67,6 +68,11 @@ def get_mrq_data(df):
     for col in range(1, 14):
         date = df.iloc[MRQ.Date, col]
         quarter = df.iloc[MRQ.Quarter,col]
+
+        # some sheets have less MRQ data, stop when we hit an empy column
+        if type(quarter) != str:
+            break
+
         revenue = df.iloc[MRQ.Revenue, col]
         gp = df.iloc[MRQ.GP, col]
         sb = df.iloc[MRQ.SB, col]

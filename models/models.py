@@ -1,7 +1,6 @@
 from sqlalchemy import Date, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 import datetime
-import src.database as db
 
 
 class Base(DeclarativeBase):
@@ -21,7 +20,7 @@ class Volume(Base):
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   company_id: Mapped[int] = mapped_column(ForeignKey("company.id"))
-  company_ticker: Mapped[str] = mapped_column(ForeignKey("company.name"))
+  company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
   date = mapped_column(Date, default=datetime.datetime.now().date())
   count: Mapped[int] = mapped_column(Float, default=0.0)
 
@@ -30,9 +29,25 @@ class Volume(Base):
   )
 
 
-def create_models():
-  engine = db.create_database_engine()
+class CurrentQuarter(Base):
+  __tablename__ = 'current_quarter'
 
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  quarter: Mapped[str] = mapped_column(String(10), nullable=False)
+  company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
+  revenue: Mapped[Float] = mapped_column(Float)
+  gp: Mapped[Float] = mapped_column(Float)
+  sb: Mapped[Float] = mapped_column(Float)
+  gm: Mapped[Float] = mapped_column(Float)
+  current_def_revenue: Mapped[Float] = mapped_column(Float)
+  billings: Mapped[Float] = mapped_column(Float)
+
+  __table_args__ = (
+      UniqueConstraint('quarter', 'company_ticker'),
+  )
+
+
+def create_models(engine):
   Base.metadata.create_all(engine)
 
   Session = sessionmaker(bind=engine)
