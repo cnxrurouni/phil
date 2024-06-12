@@ -1,4 +1,4 @@
-from connect import run_migrations
+from src.database import run_migrations
 
 
 def main():

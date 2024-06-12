@@ -1,8 +1,7 @@
-import numpy
-from sqlalchemy import create_engine, Date, Float, ForeignKey, Integer, String, select, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Session, Mapped, mapped_column, sessionmaker
-from parse_excel import parse_excel_sheet
+from sqlalchemy import Date, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 import datetime
+import src.database as db
 
 
 class Base(DeclarativeBase):
@@ -31,59 +30,15 @@ class Volume(Base):
   )
 
 
-def create_database_engine():
-  username = 'postgres'
-  password = ''
-  host = '127.0.0.1'
-  db = 'Finance'
-
-  database_url = f'postgresql://{username}:{password}@{host}/{db}'
-
-  # Create an engine to connect to a postgres DB
-  engine = create_engine(database_url)
-
-  return engine
-
-
 def create_models():
-  engine = create_database_engine()
+  engine = db.create_database_engine()
 
-  # Step 4: Create the database tables
   Base.metadata.create_all(engine)
 
-  # Step 5: Insert data into the database
   Session = sessionmaker(bind=engine)
 
-  companies = parse_excel_sheet("sheet2.xls")
-
   with Session() as session:
-    # get volume Data
-    for ticker, obj in companies.items():
-      query = select(Company).where(Company.ticker == ticker)
-      result = session.execute(query).mappings().first()
+    session.commit()
 
-      # if company doesn't exist in DB, create it
-      if not result:
-        comp = Company(name=ticker, ticker=ticker)
-        session.add(comp)
-        session.commit()
-        query = select(Company).where(Company.ticker == ticker)
-        result = session.execute(query).mappings().first()
 
-      comp = result["Company"]
-
-      for date, val in obj.volume:
-        if type(val) is not numpy.float64:
-          # PCOR has invalid volume data
-          continue
-
-        query = select(Volume).where(Volume.company_ticker == ticker, Volume.date == date)
-        result = session.execute(query).mappings().first()
-
-        if not result:
-          volume = Volume(company_id=comp.id, company_ticker=comp.ticker, date=date, count=val)
-          session.add(volume)
-          session.commit()
-        else:
-          vol = result["Volume"]
 
