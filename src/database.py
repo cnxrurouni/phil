@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 from src.parse_excel import parse_excel_sheet
 import os
-from models.models import Company, Volume
+from models.models import Company, CurrentQuarter, Volume
 
 password = ''
 
@@ -28,11 +28,9 @@ def create_database_engine():
   return engine
 
 
-def populate_database_from_excel():
+def populate_database_from_excel(engine):
   path = os.getcwd()
   companies = parse_excel_sheet(os.path.join(path, "src", "sheet2.xls"))
-
-  engine = create_database_engine()
 
   Session = sessionmaker(bind=engine)
 
@@ -52,8 +50,22 @@ def populate_database_from_excel():
 
       comp = result["Company"]
 
-      # print(obj.mrq_data)
-      # break
+      for quarter, quarter_obj in obj.mrq_data.items():
+        if not quarter:
+          continue
+
+        print(f'ticker: {ticker} quarter: {quarter}')
+        query = select(CurrentQuarter).where(CurrentQuarter.quarter == quarter, CurrentQuarter.company_ticker == ticker)
+        result = session.execute(query).mappings().first()
+        if not result:
+          current_quarter = CurrentQuarter(quarter=quarter, company_ticker=ticker, revenue=quarter_obj.revenue,
+                                           gp=quarter_obj.gp, sb=quarter_obj.sb, gm=quarter_obj.gm,
+                                           current_def_revenue=quarter_obj.current_def_revenue,
+                                           billings=quarter_obj.billings)
+          session.add(current_quarter)
+          quarter_obj.print()
+          session.commit()
+
 
       for date, val in obj.volume:
         if type(val) is not numpy.float64:
@@ -100,9 +112,11 @@ def run_migrations():
   # Creates DB Finance
   create_database()
 
+  engine = create_database_engine()
+
   # Create Tables Company and Volume in Finance DB
-  create_models()
+  create_models(engine)
 
   # read data in from Excel
-  populate_database_from_excel()
+  populate_database_from_excel(engine)
 
