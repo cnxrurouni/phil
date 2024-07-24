@@ -1,48 +1,33 @@
 import configparser
-from models.models import Company, CurrentQuarter, Volume
-from src.database import create_database_engine
-from sqlalchemy import select, func
-from sqlalchemy.orm import sessionmaker
-import ast
+from src.config_tools import set_universe, get_tickers_from_universe, get_current_quarters
+from src.database import get_current_quarter_data, get_volume_data
 
-config = configparser.ConfigParser()
-config.read('universe_configuration.ini')
+def main():
+  # mimic backtest operations
 
-# get Company list from Universe 1
-universe_one = ast.literal_eval(config.get("UNIVERSES", "ONE"))
-universe_two = ast.literal_eval(config.get("UNIVERSES", "TWO"))
+  # 1. Set Universe we are targeting
+  set_universe('UNIVERSE_ONE')
 
-# check data flags
-volume = ast.literal_eval(config["DATA"]["Volume"])
-current_quarter = ast.literal_eval(config["DATA"]["CurrentQuarter"])
-print(current_quarter)
+  # 2. get tickers from config
+  tickers = get_tickers_from_universe()
+  print(tickers)
 
-engine = create_database_engine()
+  # 3a. get current quarter list from config
+  current_quarters = get_current_quarters()
+  print(current_quarters)
 
-Session = sessionmaker(bind=engine)
+  # 3b. get current quarter data for given ticker(s)
+  quarter_data = get_current_quarter_data(tickers, current_quarters)
+  print(quarter_data)
+  # access as dict ex: quarter_data["ADBE"]["CQ42019"]["gp"]
 
-with (Session() as session):
-    query = select(Company).where(Company.ticker.in_(universe_one))
-    result = session.execute(query)
-    for r in result.mappings().fetchall():
-        ticker = r['Company'].ticker
-        print(f'Company: {ticker}')
+  # 4a. Get volume data
+  volume_data = get_volume_data(tickers)
+  print(volume_data)
 
-        if volume:
-            total = session.query(func.sum(Volume.count)).filter(Volume.company_ticker == ticker).scalar()
-            print(f'Total Volume: {total}')
-            print()
 
-        if current_quarter:
-            query = select(CurrentQuarter).where(CurrentQuarter.company_ticker.in_(universe_one), CurrentQuarter.quarter.in_(current_quarter))
-            result = session.execute(query)
-            for cq in result.mappings().fetchall():
-                print(f'Quarter: {cq["CurrentQuarter"].quarter}')
-                print(f'gp: {cq["CurrentQuarter"].gp}')
-                print(f'sb: {cq["CurrentQuarter"].sb}')
-                print(f'gm: {cq["CurrentQuarter"].gm}')
-                print(f'current_def_revenue: {cq["CurrentQuarter"].current_def_revenue}')
-                print(f'billings: {cq["CurrentQuarter"].billings}')
-                print()
 
-        print()
+
+if __name__ == "__main__":
+  main()
+

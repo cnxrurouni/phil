@@ -5,7 +5,7 @@ from psycopg2.errors import DuplicateDatabase
 import psycopg2
 from psycopg2._psycopg import connection
 from models.models import create_models
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select, func
 import numpy
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
@@ -13,7 +13,61 @@ from src.parse_excel import parse_excel_sheet
 import os
 from models.models import Company, CurrentQuarter, Volume
 
-password = ''
+password = 'mother1!'
+DEBUG = False
+
+
+def get_volume_data(tickers, engine=None):
+  if engine is None:
+    engine = create_database_engine()
+
+  Session = sessionmaker(bind=engine)
+  volume = {}
+  with Session() as session:
+    query = select(Company).where(Company.ticker.in_(tickers))
+    result = session.execute(query)
+    for r in result.mappings().fetchall():
+      ticker = r['Company'].ticker
+
+      if DEBUG:
+        print(f'Company: {ticker}')
+
+      total = session.query(func.sum(Volume.count)).filter(Volume.company_ticker == ticker).scalar()
+      volume[ticker] = total
+
+  return volume
+
+
+def get_current_quarter_data(tickers, quarters, engine=None):
+  if engine is None:
+    engine = create_database_engine()
+
+  Session = sessionmaker(bind=engine)
+
+  data = {}
+  with Session() as session:
+    query = select(CurrentQuarter).where(CurrentQuarter.company_ticker.in_(tickers),
+                                         CurrentQuarter.quarter.in_(quarters))
+    result = session.execute(query)
+    for cq in result.mappings().fetchall():
+      data[cq["CurrentQuarter"].company_ticker] = {}
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter] = {}
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter]["gp"] = cq["CurrentQuarter"].gp
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter]["sb"] = cq["CurrentQuarter"].sb
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter]["gm"] = cq["CurrentQuarter"].gm
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter]["current_def_revenue"] = cq["CurrentQuarter"].current_def_revenue
+      data[cq["CurrentQuarter"].company_ticker][cq["CurrentQuarter"].quarter]["billings"] = cq[
+        "CurrentQuarter"].billings
+
+      if DEBUG:
+        print(f'Quarter: {cq["CurrentQuarter"].quarter}')
+        print(f'gp: {cq["CurrentQuarter"].gp}')
+        print(f'sb: {cq["CurrentQuarter"].sb}')
+        print(f'gm: {cq["CurrentQuarter"].gm}')
+        print(f'current_def_revenue: {cq["CurrentQuarter"].current_def_revenue}')
+        print(f'billings: {cq["CurrentQuarter"].billings}')
+
+    return data
 
 def create_database_engine():
   username = 'postgres'
@@ -65,7 +119,6 @@ def populate_database_from_excel(engine):
           session.add(current_quarter)
           quarter_obj.print()
           session.commit()
-
 
       for date, val in obj.volume:
         if type(val) is not numpy.float64:
@@ -119,4 +172,3 @@ def run_migrations():
 
   # read data in from Excel
   populate_database_from_excel(engine)
-
