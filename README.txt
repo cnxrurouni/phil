@@ -1,16 +1,10 @@
-install python3
+1. Install Docker Desktop: https://www.docker.com/products/docker-desktop/
 
-then install these packages to run
-pip install pandas
-pip install openpyxl
-pip install SQLAlchemy
-pip install psycopg2
+2. Git pull latest code and run the command:
+```docker-compose -f docker-compose.yaml -p test up --build```
 
-DL and install postgres db:
-https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+This will build the images to run postgres and ubuntu, then bring
+up two services named db and ubuntu. 
 
-Read bottom to get PSQL working:
-https://www.enterprisedb.com/docs/supported-open-source/postgresql/installing/windows/
-
-windows github client:
-https://desktop.github.com/
+3. On Docker Desktop, click the ubuntu service and under exec tab, run this command:
+```source sqlAlchemy/bin/activate; python3 create_database.py```
