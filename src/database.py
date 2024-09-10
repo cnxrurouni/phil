@@ -13,7 +13,9 @@ from src.parse_excel import parse_excel_sheet
 import os
 from models.models import Company, CurrentQuarter, Volume
 
-password = 'mother1!'
+USER = os.getenv('PGUSER')
+PASSWORD = os.environ.get('PGPASSWORD')
+
 DEBUG = False
 
 
@@ -70,11 +72,10 @@ def get_current_quarter_data(tickers, quarters, engine=None):
     return data
 
 def create_database_engine():
-  username = 'postgres'
-  host = '127.0.0.1'
-  db = 'Finance'
+  host = 'db'
+  db = 'phil'
 
-  database_url = f'postgresql://{username}:{password}@{host}/{db}'
+  database_url = f'postgresql://{USER}:{PASSWORD}@{host}/{db}'
 
   # Create an engine to connect to a postgres DB
   engine = create_engine(database_url)
@@ -129,21 +130,22 @@ def populate_database_from_excel(engine):
         result = session.execute(query).mappings().first()
 
         if not result:
-          volume = Volume(company_id=comp.id, company_ticker=comp.ticker, date=date, count=val)
+          volume = Volume(company_id=comp.id, company_ticker=comp.ticker, date=date, count=float(val)) 
           session.add(volume)
           session.commit()
 
 
 def connect_to_db():
-  config = {'user': 'postgres',
-            'password': password,
-            'host': '127.0.0.1',
+  config = {'user': USER,
+            'password': PASSWORD,
+            'host': 'db',
             'port': '5432',
-            'dbname': 'postgres'}
+            'dbname': 'phil'}
   try:
     cnx: connection | connection | Any = psycopg2.connect(**config)
   except psycopg2.Error as err:
-    print(err)
+    print(f"CONNECTION ERROR: {err}")
+    print(config)
     exit(1)
   else:
     return cnx

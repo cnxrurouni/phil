@@ -1,0 +1,34 @@
+services:
+#  web:
+#    build: .
+#    ports:
+#      - "80:8000"
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#    command: ["python", "app.py"]
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: phil
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+
+  ubuntu:
+    build:
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      - PGUSER=admin
+      - PGPASSWORD=password
+    working_dir: /app
+    command: ["sleep", "infinity"]
+    # command: ["/bin/bash", "source sqlAlchemy/bin/activate; python3 /app/create_database.py"]
+volumes:
+  pgdata:

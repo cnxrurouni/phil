@@ -38,3 +38,7 @@ command: \dt
 1. Had to re-create volume table because I forgot to make date column unique. Manually delete your volume table and re-run
 create_database.py script.
 2. Populating DB with companies and volume data from sheet2.xls
+
+9/9/24:
+to log into postgres table via docker container
+psql -h localhost -U admin -d phil
