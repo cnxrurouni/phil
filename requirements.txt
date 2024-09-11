@@ -3,3 +3,6 @@ pandas
 openpyxl
 sqlAlchemy
 xlrd
+fastapi
+databases[postgresql]
+uvicorn

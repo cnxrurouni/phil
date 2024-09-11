@@ -11,7 +11,6 @@ class Company(Base):
   __tablename__ = 'company'
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
   ticker: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
 
 

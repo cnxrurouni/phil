@@ -1,0 +1,31 @@
+# Step 1: Use the official Node.js image as the base
+FROM node:latest
+
+# Step 2: Set the working directory inside the container
+WORKDIR /app
+
+# Copy app code
+COPY ui/package.json /app/package.json
+COPY ui/package-lock.json /app/package-lock.json
+
+# Step 4: Install the dependencies
+RUN npm install
+
+# CPY APP CODE
+COPY ui/ ./
+
+# Step 6: Build the app for production
+RUN npm run build
+
+# Step 7: Use a lightweight server to serve the production build
+# Use an official Nginx image
+FROM nginx:alpine
+
+# Step 8: Copy the build output to the Nginx HTML directory
+COPY --from=0 /app/build /usr/share/nginx/html
+
+# Step 9: Expose the port the app will run on
+EXPOSE 80
+
+# Step 10: Start Nginx when the container starts
+# CMD ["nginx", "-g", "daemon off;"]

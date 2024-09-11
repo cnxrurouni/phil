@@ -15,8 +15,20 @@ from models.models import Company, CurrentQuarter, Volume
 
 USER = os.getenv('PGUSER')
 PASSWORD = os.environ.get('PGPASSWORD')
-
+DATABASE = os.environ.get('PGDATABASE')
 DEBUG = False
+
+
+def get_tickers():
+  engine = create_database_engine()
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    query = select(Company)
+    result = session.execute(query)
+    tickers = result.scalars().all()
+    print(tickers)
+    return tickers
+
 
 
 def get_volume_data(tickers, engine=None):
@@ -73,7 +85,7 @@ def get_current_quarter_data(tickers, quarters, engine=None):
 
 def create_database_engine():
   host = 'db'
-  db = 'phil'
+  db = DATABASE
 
   database_url = f'postgresql://{USER}:{PASSWORD}@{host}/{db}'
 
@@ -140,7 +152,7 @@ def connect_to_db():
             'password': PASSWORD,
             'host': 'db',
             'port': '5432',
-            'dbname': 'phil'}
+            'dbname': DATABASE}
   try:
     cnx: connection | connection | Any = psycopg2.connect(**config)
   except psycopg2.Error as err:

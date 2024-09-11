@@ -1,12 +1,28 @@
 services:
-#  web:
-#    build: .
-#    ports:
-#      - "80:8000"
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#    command: ["python", "app.py"]
+  ui:
+    build:
+      dockerfile: ui/Dockerfile.ui
+    working_dir: /app
+    ports:
+     - "3000:80"
+    command: ["nginx", "-g", "daemon off;"]
+  apiserver:
+    image: python:3.10
+    build:
+      dockerfile: api_server/Dockerfile.api
+    volumes:
+      - .:/app  # Mount your local repo dir to /app dir
+    working_dir: /app 
+    command: ["uvicorn", "api_server.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]  # Command to run the FastAPI app
+    ports:
+      - "8000:8000"  # Expose port 8000 for FastAPI
+    environment:
+      - PYTHONUNBUFFERED=1  # Optional: Ensure logs are flushed immediately
+      - PGUSER=admin
+      - PGPASSWORD=password
+      - PGDATABASE=phil
+    depends_on:
+      - db
   db:
     image: postgres
     restart: always
@@ -18,15 +34,15 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data 
-
   ubuntu:
     build:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.ubuntu
     depends_on:
       - db
     environment:
       - PGUSER=admin
       - PGPASSWORD=password
+      - PGDATABASE=phil
     working_dir: /app
     command: ["sleep", "infinity"]
     # command: ["/bin/bash", "source sqlAlchemy/bin/activate; python3 /app/create_database.py"]
