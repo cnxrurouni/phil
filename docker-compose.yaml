@@ -10,10 +10,11 @@ services:
     ports:
      - "3000:3000"
     environment:
-      - WDS_SOCKET_HOST=127.0.0.1 
+      - WDS_SOCKET_HOST=localhost
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_SERVER_URL=http://localhost:8000
     # command: ["nginx", "-g", "daemon off;"]
     command: ["npm", "start"]
     depends_on:

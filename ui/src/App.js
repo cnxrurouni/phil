@@ -1,12 +1,8 @@
-import DataFetchingComponent from './dataFetcher';
+import React, { useEffect, useState } from 'react';
+import TextField from '@mui/material/TextField';
+import { Autocomplete } from '@mui/material';
 
 function App() {
-  let stocks = DataFetchingComponent();
-  console.log(stocks);
-  return (
-    <>
-    <div>Test</div></>
-  );
 }
 
 export default App;
