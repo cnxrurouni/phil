@@ -7,10 +7,12 @@ WORKDIR /app
 # Copy app code
 COPY ui/package.json /app/package.json
 COPY ui/package-lock.json /app/package-lock.json
-COPY ui/ /app
 
 # Step 4: Install the dependencies
 RUN npm install
+
+# copy repo
+COPY ui/ /app
 
 # Step 6: Build the app for production
 RUN npm run build
