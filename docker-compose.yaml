@@ -26,7 +26,7 @@ services:
     build:
       dockerfile: api_server/Dockerfile.api
     volumes:
-      - .:/app  # Mount your local repo dir to /app dir
+      - ./api_sever:/app/api_server  # Mount your local repo dir to /app dir
     working_dir: /app 
     command: ["uvicorn", "api_server.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]  # Command to run the FastAPI app
     ports:

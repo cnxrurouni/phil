@@ -46,6 +46,21 @@ class CurrentQuarter(Base):
   )
 
 
+class Universe(Base):
+  __tablename__ = 'universe' 
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+
+
+class UniverseTickerMapping(Base):
+  __tablename__ = 'universe_ticker_mapping'
+  
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id"), index=True)
+  ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
+
+
 def create_models(engine):
   Base.metadata.create_all(engine)
 

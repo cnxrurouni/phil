@@ -109,7 +109,7 @@ def populate_database_from_excel(engine):
 
       # if company doesn't exist in DB, create it
       if not result:
-        comp = Company(name=ticker, ticker=ticker)
+        comp = Company(ticker=ticker)
         session.add(comp)
         session.commit()
         query = select(Company).where(Company.ticker == ticker)
