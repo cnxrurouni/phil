@@ -25,10 +25,10 @@ function App({ children }) {
         <Box sx={{ display: 'flex' }}>
           <MenuSidebar style={style} />
           <Routes>
-            <Route path="/" element={<Navigate to="/get_universes" />} /> {/* Redirect to UniverseListPage */}
+            <Route path="/" element={<Navigate to="/universes" />} /> {/* Redirect to UniverseListPage */}
             <Route path="/create_universe" element={<CreateUniversePage style={style} />} />
             <Route path="/backtest_results" element={<ExamplePage style={style} />} />
-            <Route path="/get_universes" element={<UniverseListPage style={style} />} />
+            <Route path="/universes" element={<UniverseListPage style={style} />} />
             {/* Define other routes as needed */}
           </Routes>
         </Box>

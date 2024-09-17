@@ -4,6 +4,8 @@ import StockListDropdown from '../modules/StockListDropdown';
 import CalendarDatePicker from '../modules/CalendarDatePicker';
 import dayjs from 'dayjs';
 import EnterNameForm from '../modules/EnterNameForm';
+import { useNavigate } from 'react-router-dom';
+
 
 const apiServerUrl = process.env.REACT_APP_API_SERVER_URL;
 
@@ -13,6 +15,7 @@ const CreateUniversePage = ({ style }) => {
   const [beginDate, setBeginDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // Initialize navigate
 
   const handleBeginChange = (newValue) => {
     setBeginDate(newValue); // Update the begin date
@@ -69,7 +72,7 @@ const CreateUniversePage = ({ style }) => {
     })
     .then(data => {
       console.log('Success:', data);
-      // Optionally handle success (e.g., navigate to another page or clear form)
+      navigate("/universes");
     })
     .catch(error => {
       console.error('Error:', error);
