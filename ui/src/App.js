@@ -1,10 +1,12 @@
 import { Box } from '@mui/material';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import MenuSidebar from './modules/MenuSidebar';
 import CreateUniversePage from './pages/CreateUniversePage';
 import ExamplePage from './pages/ExamplePage'; 
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import UniverseListPage from './pages/UniverseListPage';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+
 
 const drawerWidth = 240;
 
@@ -23,8 +25,10 @@ function App({ children }) {
         <Box sx={{ display: 'flex' }}>
           <MenuSidebar style={style} />
           <Routes>
+            <Route path="/" element={<Navigate to="/get_universes" />} /> {/* Redirect to UniverseListPage */}
             <Route path="/create_universe" element={<CreateUniversePage style={style} />} />
             <Route path="/backtest_results" element={<ExamplePage style={style} />} />
+            <Route path="/get_universes" element={<UniverseListPage style={style} />} />
             {/* Define other routes as needed */}
           </Routes>
         </Box>

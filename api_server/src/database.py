@@ -22,6 +22,28 @@ def get_tickers():
     tickers = result.scalars().all()
     return tickers
 
+def get_universes():
+  engine = create_database_engine()
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    query = select(Universe)
+    result = session.execute(query)
+    universes = result.scalars().all()
+    
+    # Map each universe to its list of tickers
+    universe_data = []
+    
+    for universe in universes:
+      # Extract tickers
+      tickers = [utm.ticker for utm in universe.mappings]
+      universe_data.append({
+        'id': universe.id,
+        'name': universe.name,
+        'date_range': universe.date_range,  # Make sure date_range is in a serializable format
+        'tickers': tickers
+    })
+      
+    return universe_data
 
 def post_create_universe(body: UniverseRequestBody):
   engine = create_database_engine()
