@@ -5,10 +5,9 @@ from sqlalchemy import create_engine, select, func
 import numpy
 from sqlalchemy.orm import sessionmaker
 import os
-from api_server.src.models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
-from api_server.src.BaseModels import UniverseRequestBody
-from api_server.src.parse_excel import parse_excel_sheet
-
+from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
+from BaseModels import UniverseRequestBody
+from parse_excel import parse_excel_sheet
 
 
 DEBUG = False
@@ -21,7 +20,6 @@ def get_tickers():
     query = select(Company)
     result = session.execute(query)
     tickers = result.scalars().all()
-    print(tickers)
     return tickers
 
 
@@ -34,7 +32,7 @@ def post_create_universe(body: UniverseRequestBody):
     session.add(universe)
     
     # Create a list of UniverseTickerMapping instances
-    mappings = [UniverseTickerMapping(universe_id=universe.id, ticker=ticker) for ticker in body.tickers]
+    mappings = [UniverseTickerMapping(universe=universe, ticker=ticker) for ticker in body.tickers]
 
     # Add all mappings to the session at once
     session.add_all(mappings)
@@ -112,7 +110,7 @@ def create_database_engine():
 
 def populate_database_from_excel(engine):
   path = os.getcwd()
-  companies = parse_excel_sheet(os.path.join(path, "sheet2.xls"))
+  companies = parse_excel_sheet(os.path.join(path, "api_server/src","sheet2.xls"))
 
   Session = sessionmaker(bind=engine)
 
@@ -136,7 +134,6 @@ def populate_database_from_excel(engine):
         if not quarter:
           continue
 
-        print(f'ticker: {ticker} quarter: {quarter}')
         query = select(CurrentQuarter).where(CurrentQuarter.quarter == quarter, CurrentQuarter.company_ticker == ticker)
         result = session.execute(query).mappings().first()
         if not result:
@@ -145,7 +142,6 @@ def populate_database_from_excel(engine):
                                            current_def_revenue=quarter_obj.current_def_revenue,
                                            billings=quarter_obj.billings)
           session.add(current_quarter)
-          quarter_obj.print()
           session.commit()
 
       for date, val in obj.volume:

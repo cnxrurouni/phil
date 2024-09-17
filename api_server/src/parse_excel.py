@@ -1,5 +1,5 @@
 import pandas as pd
-from api_server.src.Company import Company, MostRecentQuarter, InvestmentFirm, MRQ, KEY_METRICS, INPUT_VARIABLES, DERIVED_VARIABLES, Z_SCORE
+from Company import Company, MostRecentQuarter, InvestmentFirm, MRQ, KEY_METRICS, INPUT_VARIABLES, DERIVED_VARIABLES, Z_SCORE
 
 DEBUG = 0
     

@@ -1,10 +1,10 @@
-# Use the official Python 3.10 image
 FROM python:3.10
 
 # Set environment variables
 ENV PGUSER=admin
 ENV PGPASSWORD=password
 ENV PGDATABASE=phil
+ENV PYTHONPATH=/app/api_server/src
 
 # Set working directory
 WORKDIR /app
@@ -20,11 +20,10 @@ COPY api_server/requirements.txt /app
 RUN /bin/bash -c "source /app/sqlAlchemy/bin/activate && pip install -r /app/requirements.txt"
 
 # Copy the rest of the application
-COPY /api_server /app/api_server
+COPY ./api_server /app/api_server
 
 # Expose the port
 EXPOSE 8000
 
 # Set the entrypoint
-ENTRYPOINT ["/bin/bash", "-c", "source /app/sqlAlchemy/bin/activate && uvicorn api_server.main:app --host 0.0.0.0 --port 8000 --reload"]
-
+ENTRYPOINT ["/bin/bash", "-c", "source /app/sqlAlchemy/bin/activate && python3 /app/api_server/src/create_database.py && /app/sqlAlchemy/bin/uvicorn api_server.src.main:app --host 0.0.0.0 --port 8000 --reload"]

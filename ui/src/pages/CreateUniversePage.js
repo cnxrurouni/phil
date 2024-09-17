@@ -31,7 +31,7 @@ const CreateUniversePage = ({ style }) => {
       const postData = {
         name: name,
         tickers: Array.isArray(tickers) ? tickers : [],
-        date_range: `[${beginDate}, ${endDate}]`,
+        date_range: `[${beginDate.format('YYYY-MM-DD')}, ${endDate.format('YYYY-MM-DD')}]`,
       };
 
       // Make the POST request

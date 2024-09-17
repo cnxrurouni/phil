@@ -25,16 +25,16 @@ services:
     build:
       dockerfile: api_server/Dockerfile.api
     volumes:
-      - ./api_server/src:/app/api_server/src # Mount your local repo dir to /app dir
-    working_dir: /app 
-    command: ["uvicorn", "api_server.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]  # Command to run the FastAPI app
+      - ./api_server/src:/app/api_server/src
+    working_dir: /app
     ports:
-      - "8000:8000"  # Expose port 8000 for FastAPI
+      - "8000:8000"
     environment:
-      - PYTHONUNBUFFERED=1  # Optional: Ensure logs are flushed immediately
+      - PYTHONUNBUFFERED=1
       - PGUSER=admin
       - PGPASSWORD=password
       - PGDATABASE=phil
+      - PYTHONPATH=/app/api_server/src
     depends_on:
       - db
     networks:
@@ -56,6 +56,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U admin -d phil"]
       interval: 10s
       retries: 5
+      start_period: 30s
+      timeout: 5s
 #  ubuntu:
 #    build:
 #      dockerfile: Dockerfile.ubuntu

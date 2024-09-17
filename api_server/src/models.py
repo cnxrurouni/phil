@@ -1,6 +1,7 @@
 from sqlalchemy import Column, CheckConstraint, Date, Float, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import DATERANGE
+
 
 import datetime
 
@@ -55,9 +56,12 @@ class Universe(Base):
   name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
   date_range = Column(DATERANGE, nullable=False)
 
-__table_args__ = (
-  CheckConstraint('lower(date_range) < upper(date_range)', name='valid_date_range'),
-)
+  # Relationship to UniverseTickerMapping
+  mappings = relationship("UniverseTickerMapping", back_populates="universe")
+
+  __table_args__ = (
+    CheckConstraint('lower(date_range) < upper(date_range)', name='valid_date_range'),
+  )
 
 
 class UniverseTickerMapping(Base):
@@ -67,6 +71,8 @@ class UniverseTickerMapping(Base):
   universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id"), index=True)
   ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
 
+  # Relationship back to Universe
+  universe = relationship("Universe", back_populates="mappings")
 
 def create_models(engine):
   Base.metadata.create_all(engine)

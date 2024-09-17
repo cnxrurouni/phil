@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import api_server.src.database as db
+from database import get_tickers, post_create_universe, UniverseRequestBody
 
 
 # Allow CORS for your frontend URL
@@ -24,11 +24,11 @@ async def read_root():
 
 @app.get("/tickers")
 async def read_tickers():
-    tickers = db.get_tickers()
+    tickers = get_tickers()
     return {"tickers": tickers}
 
 
 @app.post("/create_universe")
-async def create_universe(body: db.UniverseRequestBody):
-    universe = db.post_create_universe(body)
+async def create_universe(body: UniverseRequestBody):
+    universe = post_create_universe(body)
     return {"universe": universe}
