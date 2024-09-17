@@ -1,9 +1,9 @@
 psycopg2
+sqlAlchemy
+fastapi
 pandas
 openpyxl
-sqlAlchemy
 xlrd
-fastapi
 databases[postgresql]
 uvicorn
 pydantic

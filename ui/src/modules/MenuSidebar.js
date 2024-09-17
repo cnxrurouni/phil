@@ -1,8 +1,7 @@
 import * as React from 'react';
-import { AppBar, Toolbar, IconButton, Drawer, List, ListItem, ListItemIcon, ListItemText, Typography, CssBaseline, Divider } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Drawer, List, ListItem, ListItemText, Typography, CssBaseline, Divider } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Box } from '@mui/system';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate hook
 
 
@@ -25,8 +24,8 @@ export default function MenuSidebar({style}) {
       <Toolbar />
       <Divider />
       <List>
-        {['Universes', 'Backtest Results'].map((text, index) => (
-          <ListItem button key={text} onClick={() => handleNavigation(index === 0 ? '/universes' : '/backtest-results')}>
+        {['Create Universe', 'Backtest Results'].map((text, index) => (
+          <ListItem button key={text} onClick={() => handleNavigation(index === 0 ? '/create_universe' : '/backtest_results')}>
             <ListItemText primary={text} />
           </ListItem>
         ))}

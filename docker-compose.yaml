@@ -22,11 +22,10 @@ services:
     networks:
       - local
   apiserver:
-    image: python:3.10
     build:
       dockerfile: api_server/Dockerfile.api
     volumes:
-      - ./api_sever:/app/api_server  # Mount your local repo dir to /app dir
+      - ./api_server/src:/app/api_server/src # Mount your local repo dir to /app dir
     working_dir: /app 
     command: ["uvicorn", "api_server.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]  # Command to run the FastAPI app
     ports:
@@ -53,19 +52,23 @@ services:
       - pgdata:/var/lib/postgresql/data 
     networks:
       - local
-  ubuntu:
-    build:
-      dockerfile: Dockerfile.ubuntu
-    depends_on:
-      - db
-    environment:
-      - PGUSER=admin
-      - PGPASSWORD=password
-      - PGDATABASE=phil
-    working_dir: /app
-    command: ["sleep", "infinity"]
-    networks:
-      - local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d phil"]
+      interval: 10s
+      retries: 5
+#  ubuntu:
+#    build:
+#      dockerfile: Dockerfile.ubuntu
+#    depends_on:
+#      - db
+#    environment:
+#      - PGUSER=admin
+##      - PGPASSWORD=password
+#      - PGDATABASE=phil
+#    working_dir: /app
+#    command: ["sleep", "infinity"]
+#    networks:
+#      - local
     # command: ["/bin/bash", "source sqlAlchemy/bin/activate; python3 /app/create_database.py"]
 volumes:
   pgdata:

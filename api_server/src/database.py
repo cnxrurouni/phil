@@ -1,21 +1,16 @@
 from typing import Any
-
-from psycopg2 import sql
-from psycopg2.errors import DuplicateDatabase
 import psycopg2
-from psycopg2._psycopg import connection
-from models.models import create_models
+from psycopg2 import sql
 from sqlalchemy import create_engine, select, func
 import numpy
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
-from src.parse_excel import parse_excel_sheet
 import os
-from models.models import Company, CurrentQuarter, Volume
+from api_server.src.models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
+from api_server.src.BaseModels import UniverseRequestBody
+from api_server.src.parse_excel import parse_excel_sheet
 
-USER = os.getenv('PGUSER')
-PASSWORD = os.environ.get('PGPASSWORD')
-DATABASE = os.environ.get('PGDATABASE')
+
+
 DEBUG = False
 
 
@@ -29,6 +24,24 @@ def get_tickers():
     print(tickers)
     return tickers
 
+
+def post_create_universe(body: UniverseRequestBody):
+  engine = create_database_engine()
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    # Create Universe
+    universe = Universe(name=body.name, date_range=body.date_range)
+    session.add(universe)
+    
+    # Create a list of UniverseTickerMapping instances
+    mappings = [UniverseTickerMapping(universe_id=universe.id, ticker=ticker) for ticker in body.tickers]
+
+    # Add all mappings to the session at once
+    session.add_all(mappings)
+
+    session.commit()
+
+    return universe
 
 
 def get_volume_data(tickers, engine=None):
@@ -85,9 +98,11 @@ def get_current_quarter_data(tickers, quarters, engine=None):
 
 def create_database_engine():
   host = 'db'
-  db = DATABASE
+  user = os.getenv('PGUSER', '')
+  password = os.getenv('PGPASSWORD', '')
+  db = os.getenv('PGDATABASE', '')
 
-  database_url = f'postgresql://{USER}:{PASSWORD}@{host}/{db}'
+  database_url = f'postgresql://{user}:{password}@{host}/{db}'
 
   # Create an engine to connect to a postgres DB
   engine = create_engine(database_url)
@@ -97,7 +112,7 @@ def create_database_engine():
 
 def populate_database_from_excel(engine):
   path = os.getcwd()
-  companies = parse_excel_sheet(os.path.join(path, "src", "sheet2.xls"))
+  companies = parse_excel_sheet(os.path.join(path, "sheet2.xls"))
 
   Session = sessionmaker(bind=engine)
 
@@ -148,13 +163,13 @@ def populate_database_from_excel(engine):
 
 
 def connect_to_db():
-  config = {'user': USER,
-            'password': PASSWORD,
+  config = {'user': os.getenv('PGUSER', ''),
+            'password': os.getenv('PGPASSWORD', ''),
             'host': 'db',
             'port': '5432',
-            'dbname': DATABASE}
+            'dbname': os.getenv('PGDATABASE', '')}
   try:
-    cnx: connection | connection | Any = psycopg2.connect(**config)
+    cnx: psycopg2.connection | psycopg2.connection | Any = psycopg2.connect(**config)
   except psycopg2.Error as err:
     print(f"CONNECTION ERROR: {err}")
     print(config)
@@ -170,7 +185,7 @@ def create_database():
   try:
     cursor.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier('Finance')))
     print("DATABASE CREATED")
-  except DuplicateDatabase:
+  except psycopg2.errors.DuplicateDatabase:
     print("DATABASE ALREADY EXISTS")
     pass
 

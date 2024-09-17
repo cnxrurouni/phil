@@ -1,4 +1,4 @@
-from src.database import run_migrations
+from api_server.src.database import run_migrations
 
 
 def main():

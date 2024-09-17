@@ -1,8 +1,10 @@
 import { Box } from '@mui/material';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import MenuSidebar from './MenuSidebar';
-import UniversePage from './UniversePage'; // Import your page components
-import BacktestResultsPage from './BacktestResultsPage'; // Import your page components
+import MenuSidebar from './modules/MenuSidebar';
+import CreateUniversePage from './pages/CreateUniversePage';
+import ExamplePage from './pages/ExamplePage'; 
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 const drawerWidth = 240;
 
@@ -13,18 +15,20 @@ const style={
 };
 
 
-function App() {
+function App({ children }) {
   return (
-    <Router>
-      <Box sx={{ display: 'flex' }}>
-        <MenuSidebar style={style} />
-        <Routes>
-          <Route path="/universes" element={<UniversePage style={style} />} />
-          <Route path="/backtest-results" element={<BacktestResultsPage style={style} />} />
-          {/* Define other routes as needed */}
-        </Routes>
-      </Box>
-    </Router>
+    <><LocalizationProvider dateAdapter={AdapterDayjs}>
+      {children}
+    </LocalizationProvider><Router>
+        <Box sx={{ display: 'flex' }}>
+          <MenuSidebar style={style} />
+          <Routes>
+            <Route path="/create_universe" element={<CreateUniversePage style={style} />} />
+            <Route path="/backtest_results" element={<ExamplePage style={style} />} />
+            {/* Define other routes as needed */}
+          </Routes>
+        </Box>
+      </Router></>
   );
 }
 export default App;

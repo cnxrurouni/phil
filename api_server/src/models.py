@@ -1,5 +1,7 @@
-from sqlalchemy import Date, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, CheckConstraint, Date, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.dialects.postgresql import DATERANGE
+
 import datetime
 
 
@@ -51,6 +53,11 @@ class Universe(Base):
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+  date_range = Column(DATERANGE, nullable=False)
+
+__table_args__ = (
+  CheckConstraint('lower(date_range) < upper(date_range)', name='valid_date_range'),
+)
 
 
 class UniverseTickerMapping(Base):
