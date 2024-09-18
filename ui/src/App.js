@@ -1,11 +1,13 @@
 import { Box } from '@mui/material';
 import MenuSidebar from './modules/MenuSidebar';
-import CreateUniversePage from './pages/CreateUniversePage';
 import ExamplePage from './pages/ExamplePage'; 
 import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import UniverseListPage from './pages/UniverseListPage';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import UniverseListPage from './pages/UniverseListPage';
+import UniverseDetailPage from './pages/UniverseDetailPage';
+import CreateUniversePage from './pages/CreateUniversePage';
+import EditUniversePage from './pages/EditUniversePage';
 
 
 const drawerWidth = 240;
@@ -29,6 +31,8 @@ function App({ children }) {
             <Route path="/create_universe" element={<CreateUniversePage style={style} />} />
             <Route path="/backtest_results" element={<ExamplePage style={style} />} />
             <Route path="/universes" element={<UniverseListPage style={style} />} />
+            <Route path="/universe/:name" element={<UniverseDetailPage />} />
+            <Route path="/edit_universe/:name" element={<EditUniversePage />} />
             {/* Define other routes as needed */}
           </Routes>
         </Box>

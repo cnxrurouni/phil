@@ -15,17 +15,35 @@ export default function MenuSidebar({style}) {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleNavigation = (path) => {
-    navigate(path); // Navigate to the specified path
+  const handleNavigation = (index) => {
+    switch (index) {
+      case 0:
+        navigate("/universes");
+        break;
+      case 1:
+        navigate("/create_universe");
+        break;
+      case 2:
+        navigate("/backtest_results");
+        break;
+      default:
+        break;
+    }
   };
+  
+  const menuList = [
+    'Universes',
+    'Create Universe',
+    'Backtest Results'
+  ];
 
   const drawer = (
     <div>
       <Toolbar />
       <Divider />
       <List>
-        {['Create Universe', 'Backtest Results'].map((text, index) => (
-          <ListItem button key={text} onClick={() => handleNavigation(index === 0 ? '/create_universe' : '/backtest_results')}>
+        {menuList.map((text, index) => (
+          <ListItem button key={text} onClick={() => handleNavigation(index)}>
             <ListItemText primary={text} />
           </ListItem>
         ))}

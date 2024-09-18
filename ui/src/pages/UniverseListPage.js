@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Box, Toolbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Link } from 'react-router-dom';  // Import Link from react-router-dom
 
 const apiServerUrl = process.env.REACT_APP_API_SERVER_URL;
 
 export default function UniverseListPage({ style }) {
   const [universes, setUniverses] = useState([]);
   const [error, setError] = useState(null);
+
+  const SX = {
+    borderBottom: '1px solid #ddd',
+    borderRight: '1px solid #ddd',
+  };
+
+  const SX2 = {
+    fontWeight: 'bold', 
+    borderBottom: '2px solid #ddd',
+    borderRight: '1px solid #ddd',
+  };
 
   // Fetch universe data when the component mounts
   useEffect(() => {
@@ -38,19 +50,27 @@ export default function UniverseListPage({ style }) {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #ddd', borderRight: '1px solid #ddd' }}>Id</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #ddd', borderRight: '1px solid #ddd' }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #ddd', borderRight: '1px solid #ddd' }}>Date Range</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #ddd' }}>Tickers</TableCell>
+              <TableCell sx={SX2}>Id</TableCell>
+              <TableCell sx={SX2}>Name</TableCell>
+              <TableCell sx={SX2}>Date Range</TableCell>
+              <TableCell sx={SX2}>Tickers</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {universes.length > 0 ? (
               universes.map((universe) => (
                 <TableRow key={universe.id} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#f9f9f9' } }}>
-                  <TableCell sx={{ borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd' }}>{universe.id || 'N/A'}</TableCell>
-                  <TableCell sx={{ borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd' }}>{universe.name || 'N/A'}</TableCell>
-                  <TableCell sx={{ borderBottom: '1px solid #ddd', borderRight: '1px solid #ddd' }}>
+                  <TableCell sx={SX}>
+                    <Link to={`/universe/${universe.id}`} state={{ universe: universe }} underline="hover">
+                      {universe.id}
+                    </Link>
+                  </TableCell>
+                  <TableCell sx={SX}>
+                    <Link to={`/universe/${universe.name}`} state={{ universe: universe }} underline="hover">
+                      {universe.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell sx={SX}>
                     {universe.date_range ? `${universe.date_range.lower} - ${universe.date_range.upper}` : 'N/A'}
                   </TableCell>
                   <TableCell sx={{ borderBottom: '1px solid #ddd' }}>{universe.tickers.join(', ')}</TableCell>

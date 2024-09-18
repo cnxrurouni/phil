@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import get_tickers, get_universes, post_create_universe, UniverseRequestBody
+from database import get_tickers, get_universes, update_universe, post_create_universe, UniverseRequestBody
 
 
 # Allow CORS for your frontend URL
@@ -37,3 +37,9 @@ async def create_universe(body: UniverseRequestBody):
 async def read_universes():
     universes = get_universes()
     return {"universes": universes}
+
+
+@app.put("/edit_universe/{universe_id}")
+def edit_universe(universe_id: int, body: UniverseRequestBody):
+  universe = update_universe(universe_id, body)
+  return {"universe": universe}

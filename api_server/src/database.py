@@ -1,13 +1,15 @@
 from typing import Any
 import psycopg2
 from psycopg2 import sql
-from sqlalchemy import create_engine, select, func
+from sqlalchemy import create_engine, select, func, update, delete
 import numpy
 from sqlalchemy.orm import sessionmaker
 import os
 from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
 from BaseModels import UniverseRequestBody
 from parse_excel import parse_excel_sheet
+from fastapi import HTTPException
+
 
 
 DEBUG = False
@@ -44,6 +46,7 @@ def get_universes():
     })
       
     return universe_data
+      
 
 def post_create_universe(body: UniverseRequestBody):
   engine = create_database_engine()
@@ -62,6 +65,48 @@ def post_create_universe(body: UniverseRequestBody):
     session.commit()
 
     return universe
+  
+
+def update_universe(universe_id: int, body: UniverseRequestBody):
+    engine = create_database_engine()
+    Session = sessionmaker(bind=engine)
+
+    with Session() as session:
+        # Update Universe details
+        stmt = (
+            update(Universe)
+            .where(Universe.id == universe_id)
+            .values(
+                name=body.name,
+                date_range=body.date_range
+            )
+            .returning(Universe)
+        )
+        result = session.execute(stmt)
+        
+        updated_universe = result.scalar()
+
+        # Delete all existing UniverseTickerMapping entries for this universe
+        session.execute(
+            delete(UniverseTickerMapping)
+            .where(UniverseTickerMapping.universe_id == universe_id)
+        )
+
+        # Add new UniverseTickerMapping entries
+        mappings = [UniverseTickerMapping(universe_id=universe_id, ticker=ticker) for ticker in body.tickers]
+        session.add_all(mappings)
+
+        # Commit transaction
+        session.commit()
+
+        universe_data = {
+          'id': updated_universe.id,
+          'name': updated_universe.name,
+          'date_range': updated_universe.date_range,  # Make sure date_range is in a serializable format
+          'tickers': body.tickers
+        }
+
+        return universe_data
 
 
 def get_volume_data(tickers, engine=None):
