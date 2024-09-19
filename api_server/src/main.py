@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from database import get_tickers, get_universes, update_universe, post_create_universe, UniverseRequestBody
+from models import MeasurementPeriodEnum
+from typing import List
 
 
 # Allow CORS for your frontend URL
@@ -30,6 +32,7 @@ async def read_tickers():
 
 @app.post("/create_universe")
 async def create_universe(body: UniverseRequestBody):
+    print(body)
     universe = post_create_universe(body)
     return {"universe": universe}
 
@@ -41,5 +44,13 @@ async def read_universes():
 
 @app.put("/edit_universe/{universe_id}")
 def edit_universe(universe_id: int, body: UniverseRequestBody):
+  print(body)
   universe = update_universe(universe_id, body)
   return {"universe": universe}
+
+@app.get("/measurement_periods", response_model=List[int])
+async def get_measurement_periods():
+    """
+    Return the allowed measurement period values as a list of integers
+    """
+    return [period.value for period in MeasurementPeriodEnum]

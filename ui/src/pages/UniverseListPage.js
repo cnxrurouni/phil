@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Typography, Box, Toolbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Link } from 'react-router-dom';  // Import Link from react-router-dom
 
-const apiServerUrl = process.env.REACT_APP_API_SERVER_URL;
 
 export default function UniverseListPage({ style }) {
   const [universes, setUniverses] = useState([]);
@@ -23,7 +22,7 @@ export default function UniverseListPage({ style }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${apiServerUrl}/get_universes`);
+        const response = await fetch(`${process.env.REACT_APP_API_SERVER_URL}/get_universes`);
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -54,6 +53,7 @@ export default function UniverseListPage({ style }) {
               <TableCell sx={SX2}>Name</TableCell>
               <TableCell sx={SX2}>Date Range</TableCell>
               <TableCell sx={SX2}>Tickers</TableCell>
+              <TableCell sx={SX2}>Measurement Period</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -73,7 +73,8 @@ export default function UniverseListPage({ style }) {
                   <TableCell sx={SX}>
                     {universe.date_range ? `${universe.date_range.lower} - ${universe.date_range.upper}` : 'N/A'}
                   </TableCell>
-                  <TableCell sx={{ borderBottom: '1px solid #ddd' }}>{universe.tickers.join(', ')}</TableCell>
+                  <TableCell sx={SX}>{universe.tickers.join(', ')}</TableCell>
+                  <TableCell sx={SX}>{universe.measurement_period}</TableCell>
                 </TableRow>
               ))
             ) : (

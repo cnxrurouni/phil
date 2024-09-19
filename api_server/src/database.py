@@ -42,7 +42,8 @@ def get_universes():
         'id': universe.id,
         'name': universe.name,
         'date_range': universe.date_range,  # Make sure date_range is in a serializable format
-        'tickers': tickers
+        'tickers': tickers,
+        'measurement_period': universe.measurement_period,
     })
       
     return universe_data
@@ -53,7 +54,7 @@ def post_create_universe(body: UniverseRequestBody):
   Session = sessionmaker(bind=engine)
   with Session() as session:
     # Create Universe
-    universe = Universe(name=body.name, date_range=body.date_range)
+    universe = Universe(name=body.name, date_range=body.date_range, measurement_period=body.measurement_period)
     session.add(universe)
     
     # Create a list of UniverseTickerMapping instances
@@ -78,7 +79,8 @@ def update_universe(universe_id: int, body: UniverseRequestBody):
             .where(Universe.id == universe_id)
             .values(
                 name=body.name,
-                date_range=body.date_range
+                date_range=body.date_range,
+                measurement_period=body.measurement_period
             )
             .returning(Universe)
         )
@@ -103,7 +105,8 @@ def update_universe(universe_id: int, body: UniverseRequestBody):
           'id': updated_universe.id,
           'name': updated_universe.name,
           'date_range': updated_universe.date_range,  # Make sure date_range is in a serializable format
-          'tickers': body.tickers
+          'tickers': body.tickers,
+          'measurement_period': body.measurement_period
         }
 
         return universe_data

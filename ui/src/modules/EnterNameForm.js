@@ -5,7 +5,7 @@ import TextField from '@mui/material/TextField';
 export default function StateTextFields({name, setName}) {
 
   return (
-    <Box
+    <Box sx={{ width: 400}}
       component="form"
       noValidate
       autoComplete="off"
@@ -14,6 +14,9 @@ export default function StateTextFields({name, setName}) {
         id="Name TextField"
         label="Universe Name"
         value={name}
+        sx={{
+          width: '100%',
+        }}
         onChange={(event) => {
           setName(event.target.value);
         }}

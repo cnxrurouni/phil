@@ -1,9 +1,14 @@
 from sqlalchemy import Column, CheckConstraint, Date, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import DATERANGE
-
-
+from enum import Enum
 import datetime
+
+class MeasurementPeriodEnum(Enum):
+    FOUR = 4
+    EIGHT = 8
+    THIRTEEN = 13
+    FIFTY_TWO = 52
 
 
 class Base(DeclarativeBase):
@@ -55,12 +60,20 @@ class Universe(Base):
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
   date_range = Column(DATERANGE, nullable=False)
+  measurement_period: Mapped[int] = mapped_column(Integer)
 
   # Relationship to UniverseTickerMapping
   mappings = relationship("UniverseTickerMapping", back_populates="universe")
 
   __table_args__ = (
     CheckConstraint('lower(date_range) < upper(date_range)', name='valid_date_range'),
+  )
+
+  __table_args__ = (
+    CheckConstraint(
+        f"measurement_period IN ({', '.join(str(v.value) for v in MeasurementPeriodEnum)})",
+        name="check_measurement_period"
+    ),
   )
 
 
@@ -73,6 +86,7 @@ class UniverseTickerMapping(Base):
 
   # Relationship back to Universe
   universe = relationship("Universe", back_populates="mappings")
+  
 
 def create_models(engine):
   Base.metadata.create_all(engine)

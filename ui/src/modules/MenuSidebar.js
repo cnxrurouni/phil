@@ -3,7 +3,7 @@ import { AppBar, Toolbar, IconButton, Drawer, List, ListItem, ListItemText, Typo
 import MenuIcon from '@mui/icons-material/Menu';
 import { Box } from '@mui/system';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate hook
-
+import '../css/MenuSidebar.css';
 
 const drawerWidth = 240;
 

@@ -6,3 +6,4 @@ class UniverseRequestBody(BaseModel):
     name: str
     tickers: List[str]
     date_range: str
+    measurement_period: int
