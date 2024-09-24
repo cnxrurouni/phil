@@ -62,8 +62,12 @@ class Universe(Base):
   date_range = Column(DATERANGE, nullable=False)
   measurement_period: Mapped[int] = mapped_column(Integer)
 
-  # Relationship to UniverseTickerMapping
-  mappings = relationship("UniverseTickerMapping", back_populates="universe")
+  # Relationship to UniverseTickerMapping with cascade delete
+  mappings = relationship(
+      "UniverseTickerMapping",
+      back_populates="universe",
+      cascade="all, delete-orphan"  # Enable cascade delete for related mappings
+  )
 
   __table_args__ = (
     CheckConstraint('lower(date_range) < upper(date_range)', name='valid_date_range'),
@@ -81,7 +85,7 @@ class UniverseTickerMapping(Base):
   __tablename__ = 'universe_ticker_mapping'
   
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id"), index=True)
+  universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id", ondelete="CASCADE"), index=True)  # Cascade delete when universe is deleted
   ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
 
   # Relationship back to Universe

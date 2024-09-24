@@ -6,7 +6,7 @@ import numpy
 from sqlalchemy.orm import sessionmaker
 import os
 from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
-from BaseModels import UniverseRequestBody
+from BaseModels import CreateUniverseRequestBody, DeleteUniverseRequestBody, EditUniverseRequestBody
 from parse_excel import parse_excel_sheet
 from fastapi import HTTPException
 
@@ -49,7 +49,7 @@ def get_universes():
     return universe_data
       
 
-def post_create_universe(body: UniverseRequestBody):
+def post_create_universe(body: CreateUniverseRequestBody):
   engine = create_database_engine()
   Session = sessionmaker(bind=engine)
   with Session() as session:
@@ -68,7 +68,7 @@ def post_create_universe(body: UniverseRequestBody):
     return universe
   
 
-def update_universe(universe_id: int, body: UniverseRequestBody):
+def update_universe(universe_id: int, body: EditUniverseRequestBody):
     engine = create_database_engine()
     Session = sessionmaker(bind=engine)
 
@@ -110,6 +110,22 @@ def update_universe(universe_id: int, body: UniverseRequestBody):
         }
 
         return universe_data
+    
+
+def delete_universes(body: DeleteUniverseRequestBody):
+  engine = create_database_engine()
+  Session = sessionmaker(bind=engine)
+
+  with Session() as session:
+    for universe_id in body.universe_ids:
+      # Delete all existing UniverseTickerMapping entries for this universe
+      session.execute(
+        delete(Universe)
+        .where(Universe.id == universe_id)
+    )
+    
+    session.commit()
+    return True
 
 
 def get_volume_data(tickers, engine=None):

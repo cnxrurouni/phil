@@ -23,17 +23,20 @@ const UniverseDetailPage = () => {
         Universe Details
       </Typography>
 
-      <Typography variant="h6" sx={{ mb: 1 }}>
+      <Typography variant="body1" sx={{ mb: 2 }}>
         name: {universe?.name || 'N/A'}
       </Typography>
       <Typography variant="body1" sx={{ mb: 2 }}>
         id: {universe?.id || 'N/A'}
       </Typography>
       <Typography variant="body1" sx={{ mb: 2 }}>
-        Date range: {universe?.date_range ? `${universe.date_range.lower} - ${universe.date_range.upper}` : 'N/A'}
+        date range: {universe?.date_range ? `${universe.date_range.lower} - ${universe.date_range.upper}` : 'N/A'}
       </Typography>
       <Typography variant="body1" sx={{ mb: 2 }}>
         tickers: {universe?.tickers?.join(', ') || 'N/A'}
+      </Typography>
+      <Typography variant="body1" sx={{ mb: 2 }}>
+        measurement period: {universe?.measurement_period}
       </Typography>
 
       <Button
