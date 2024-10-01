@@ -19,7 +19,8 @@ class Company(Base):
   __tablename__ = 'company'
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  ticker: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+  ticker: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+  ipo_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)  # Add IPO date as a nullable date field
 
 
 class Volume(Base):
@@ -85,12 +86,24 @@ class UniverseTickerMapping(Base):
   __tablename__ = 'universe_ticker_mapping'
   
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id", ondelete="CASCADE"), index=True)  # Cascade delete when universe is deleted
+  universe_id: Mapped[int] = mapped_column(ForeignKey("universe.id", ondelete="CASCADE"), index=True)
   ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
 
   # Relationship back to Universe
   universe = relationship("Universe", back_populates="mappings")
-  
+
+
+class QuarterlyReportDates(Base):
+  __tablename__ ='quarterly_report_dates'
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  quarter: Mapped[str] = mapped_column(String(10), nullable=False)
+  date = mapped_column(Date, default=datetime.datetime.now().date())
+  company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"), index=True)
+
+  __table_args__ = (
+      UniqueConstraint('company_ticker', 'quarter'),
+  )
 
 def create_models(engine):
   Base.metadata.create_all(engine)
@@ -99,6 +112,7 @@ def create_models(engine):
 
   with Session() as session:
     session.commit()
+
 
 
 

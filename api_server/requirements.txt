@@ -7,3 +7,4 @@ xlrd
 databases[postgresql]
 uvicorn
 pydantic
+yfinance

@@ -5,9 +5,10 @@ from sqlalchemy import create_engine, select, func, update, delete
 import numpy
 from sqlalchemy.orm import sessionmaker
 import os
-from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping
+from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping, QuarterlyReportDates
 from BaseModels import CreateUniverseRequestBody, DeleteUniverseRequestBody, EditUniverseRequestBody
 from parse_excel import parse_excel_sheet
+from parse_saas_hc import get_report_dates
 from fastapi import HTTPException
 
 
@@ -244,6 +245,26 @@ def populate_database_from_excel(engine):
           session.commit()
 
 
+def populate_report_dates(engine):
+  quarterly_data = get_report_dates()
+  print(quarterly_data)
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    for quarter, tickers in quarterly_data.items():
+          for ticker, date in tickers.items():
+              row = session.query(Company).filter_by(ticker=ticker).first()  # Check if row exists
+              print(row)
+              if not row:
+                row = Company(ticker=ticker)
+                session.add(row)
+                session.commit()
+              qrd = QuarterlyReportDates(company_ticker=row.ticker, date=date, quarter=quarter)
+              print(qrd)
+              session.add(qrd)      
+              session.commit()
+              print('COMMITTED')
+
+
 def connect_to_db():
   config = {'user': os.getenv('PGUSER', ''),
             'password': os.getenv('PGPASSWORD', ''),
@@ -283,3 +304,5 @@ def run_migrations():
 
   # read data in from Excel
   populate_database_from_excel(engine)
+
+  populate_report_dates(engine)
