@@ -5,10 +5,10 @@ from sqlalchemy import create_engine, select, func, update, delete
 import numpy
 from sqlalchemy.orm import sessionmaker
 import os
-from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping, QuarterlyReportDates
+from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping, QuarterlyReportDates, ShortInterest
 from BaseModels import CreateUniverseRequestBody, DeleteUniverseRequestBody, EditUniverseRequestBody
 from parse_excel import parse_excel_sheet
-from parse_saas_hc import get_report_dates
+from parse_saas_hc import get_report_dates, get_ciq_ipo_dates, get_short_interest
 from fastapi import HTTPException
 
 
@@ -247,22 +247,59 @@ def populate_database_from_excel(engine):
 
 def populate_report_dates(engine):
   quarterly_data = get_report_dates()
-  print(quarterly_data)
   Session = sessionmaker(bind=engine)
   with Session() as session:
     for quarter, tickers in quarterly_data.items():
           for ticker, date in tickers.items():
+              if ticker == 'quarter_end':
+                continue
+
               row = session.query(Company).filter_by(ticker=ticker).first()  # Check if row exists
-              print(row)
               if not row:
                 row = Company(ticker=ticker)
                 session.add(row)
                 session.commit()
-              qrd = QuarterlyReportDates(company_ticker=row.ticker, date=date, quarter=quarter)
-              print(qrd)
+              qrd = QuarterlyReportDates(company_ticker=row.ticker, date=date, quarter=quarter, quarter_end=quarterly_data[quarter]['quarter_end'])
               session.add(qrd)      
               session.commit()
-              print('COMMITTED')
+    
+    print('Quarterly Report Dates written to Database')
+
+
+def populate_ciq_ipo_dates(engine):
+  ciq_ipo_dates = get_ciq_ipo_dates()
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    for ticker, val in ciq_ipo_dates.items():
+      row = session.query(Company).filter_by(ticker=ticker).first()  # Check if row exists
+      if not row:
+        row = Company(ticker=ticker, ipo_date=val['ipo_date'], m_n_a_date=val['m_n_a_date'] if val['m_n_a_date'] else None)
+      else:
+        if not row.ipo_date and val['ipo_date']:
+          row.ipo_date= val['ipo_date']
+        if not row.m_n_a_date and val['m_n_a_date']:
+          row.m_n_a_date = val['m_n_a_date']
+      session.add(row)
+      session.commit()
+    print('CIQ IPO dates written to Database')
+
+
+def populate_short_interest(engine):
+  short_interest_data = get_short_interest()
+  Session = sessionmaker(bind=engine)
+  with Session() as session:
+    for ticker, data in short_interest_data.items():
+      row = session.query(Company).filter_by(ticker=ticker).first()  # Check if row exists
+      if not row:
+        row = Company(ticker=ticker)
+        session.add(row)
+        session.commit()
+      
+      for item in data:
+        si = ShortInterest(company_ticker=ticker, date=item['date'], short_interest=item['short_interest'])
+        session.add(si)
+        session.commit()
+    print('Short interest written to Database')
 
 
 def connect_to_db():
@@ -305,4 +342,8 @@ def run_migrations():
   # read data in from Excel
   populate_database_from_excel(engine)
 
+  populate_ciq_ipo_dates(engine)
+
   populate_report_dates(engine)
+
+  populate_short_interest(engine)

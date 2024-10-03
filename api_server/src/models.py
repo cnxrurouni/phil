@@ -19,8 +19,13 @@ class Company(Base):
   __tablename__ = 'company'
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
-  ticker: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-  ipo_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)  # Add IPO date as a nullable date field
+  ticker: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+  # setting name unique to false due to these 2 rows: 
+  # IQ50985792	Mimecast Services Limited
+  # MIME	Mimecast Services Limited
+  name: Mapped[str] = mapped_column(String(50), unique=False, nullable=True)
+  ipo_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)
+  m_n_a_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)
 
 
 class Volume(Base):
@@ -29,7 +34,7 @@ class Volume(Base):
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   company_id: Mapped[int] = mapped_column(ForeignKey("company.id"))
   company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
-  date = mapped_column(Date, default=datetime.datetime.now().date())
+  date: Mapped[Date] = mapped_column(Date)
   count: Mapped[int] = mapped_column(Float, default=0.0)
 
   __table_args__ = (
@@ -60,7 +65,7 @@ class Universe(Base):
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-  date_range = Column(DATERANGE, nullable=False)
+  date_range: Mapped[DATERANGE] = mapped_column(DATERANGE, nullable=False)
   measurement_period: Mapped[int] = mapped_column(Integer)
 
   # Relationship to UniverseTickerMapping with cascade delete
@@ -94,15 +99,29 @@ class UniverseTickerMapping(Base):
 
 
 class QuarterlyReportDates(Base):
-  __tablename__ ='quarterly_report_dates'
+  __tablename__ = 'quarterly_report_dates'
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   quarter: Mapped[str] = mapped_column(String(10), nullable=False)
-  date = mapped_column(Date, default=datetime.datetime.now().date())
+  date: Mapped[Date] = mapped_column(Date)
+  quarter_end: Mapped[Date] = mapped_column(Date)
   company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"), index=True)
 
   __table_args__ = (
       UniqueConstraint('company_ticker', 'quarter'),
+  )
+
+
+class ShortInterest(Base):
+  __tablename__ = 'short_interest'
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
+  date: Mapped[Date] = mapped_column(Date)
+  short_interest: Mapped[Float] = mapped_column(Float)
+
+  __table_args__ = (
+      UniqueConstraint('company_ticker', 'date'),
   )
 
 def create_models(engine):
