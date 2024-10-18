@@ -8,3 +8,5 @@ databases[postgresql]
 uvicorn
 pydantic
 yfinance
+python-multipart
+yahooquery

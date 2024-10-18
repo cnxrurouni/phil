@@ -117,7 +117,7 @@ class ShortInterest(Base):
 
   id: Mapped[int] = mapped_column(Integer, primary_key=True)
   company_ticker: Mapped[str] = mapped_column(ForeignKey("company.ticker"))
-  date: Mapped[Date] = mapped_column(Date)
+  date: Mapped[Date] = mapped_column(Date, index=True)
   short_interest: Mapped[Float] = mapped_column(Float)
 
   __table_args__ = (

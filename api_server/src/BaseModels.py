@@ -15,3 +15,8 @@ class EditUniverseRequestBody(CreateUniverseRequestBody):
 
 class DeleteUniverseRequestBody(BaseModel):
     universe_ids: List[int]
+
+
+class ShortInterestResponse(BaseModel):
+    ticker: str
+    short_interest: List

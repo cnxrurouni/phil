@@ -180,6 +180,46 @@ def get_current_quarter_data(tickers, quarters, engine=None):
         print(f'billings: {cq["CurrentQuarter"].billings}')
 
     return data
+  
+
+def get_short_interest_for_tickers(
+    tickers,  # Expecting a list of tickers
+    start_date,
+    end_date,
+):
+    engine = create_database_engine()
+    Session = sessionmaker(bind=engine)
+    all_short_interest_data = {}  # Dictionary to store short interest data by ticker
+    with Session() as session:
+        # Build the query for short interest data for the specified tickers and date range
+        short_interest_query = (
+            select(ShortInterest.company_ticker, ShortInterest.short_interest, ShortInterest.date)
+            .filter(
+                ShortInterest.company_ticker.in_(tickers),  # Use in_ for multiple tickers
+                ShortInterest.date.between(start_date, end_date)  # Date range filter
+            ).order_by(ShortInterest.date.asc()) 
+        )
+
+        short_interest_result = session.execute(short_interest_query)
+        short_interest_data = short_interest_result.fetchall()  # Use fetchall() instead of scalars()
+
+        # Organizing data by ticker
+        for row in short_interest_data:
+            company_ticker = row[0]  # First column (ticker)
+            short_interest = row[1]   # Second column (short interest)
+            date = row[2]             # Third column (date)
+
+            if company_ticker not in all_short_interest_data:
+                all_short_interest_data[company_ticker] = []
+            # Append a dictionary for each record
+            all_short_interest_data[company_ticker].append({
+                "short_interest": short_interest,
+                "date": date
+            })
+
+    return all_short_interest_data
+
+
 
 def create_database_engine():
   host = 'db'
@@ -259,9 +299,12 @@ def populate_report_dates(engine):
                 row = Company(ticker=ticker)
                 session.add(row)
                 session.commit()
-              qrd = QuarterlyReportDates(company_ticker=row.ticker, date=date, quarter=quarter, quarter_end=quarterly_data[quarter]['quarter_end'])
-              session.add(qrd)      
-              session.commit()
+              
+              qrd = session.query(QuarterlyReportDates).filter_by(company_ticker=row.ticker, quarter=quarter)
+              if not qrd:
+                qrd = QuarterlyReportDates(company_ticker=row.ticker, date=date, quarter=quarter, quarter_end=quarterly_data[quarter]['quarter_end'])
+                session.add(qrd)      
+                session.commit()
     
     print('Quarterly Report Dates written to Database')
 

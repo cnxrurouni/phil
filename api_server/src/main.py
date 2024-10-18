@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import database as db
 from models import MeasurementPeriodEnum
 from typing import List
+from datetime import date
 
 
 # Allow CORS for your frontend URL
@@ -64,3 +65,14 @@ async def delete_universes(body: db.DeleteUniverseRequestBody):
     """
     db.delete_universes(body)
     return {"message": "Universes deleted successfully", "deleted_ids": body.universe_ids}
+
+# sample query: http://your-domain.com/get_short_interest?ticker=AAPL&start_date=2024-01-01&end_date=2024-02-01
+@app.get("/get_short_interest") #, response_model=list[db.ShortInterestResponse])
+async def get_short_interest(
+    tickers: str,
+    start_date: date = Query(..., description="Start of date range"),
+    end_date: date = Query(..., description="End of date range"),
+):
+    ticker_list = tickers.split(',')
+    short_interest = db.get_short_interest_for_tickers(ticker_list, start_date, end_date)
+    return {'short_interest': short_interest}

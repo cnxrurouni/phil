@@ -10,7 +10,7 @@ import CreateUniversePage from './pages/CreateUniversePage';
 import EditUniversePage from './pages/EditUniversePage';
 
 
-const drawerWidth = 240;
+const drawerWidth = 100;
 
 const style={
   flexGrow: 1,
