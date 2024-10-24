@@ -6,7 +6,6 @@ services:
     volumes:
       - ./ui/src:/app/src  # Mount your local repo dir to /app dir
       - ./ui/public:/app/public  # Mount your local repo dir to /app dir
-      - ./ui/node_modules:/app/node_modules  # Mount your local repo dir to /app dir
     ports:
      - "3000:3000"
     environment:

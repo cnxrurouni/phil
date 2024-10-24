@@ -12,7 +12,8 @@ COPY ui/package-lock.json /app/package-lock.json
 RUN npm install
 
 # copy repo
-COPY ui/ /app
+COPY ui/public/ /app/public
+COPY ui/src /app/src
 
 # Step 6: Build the app for production
 RUN npm run build
