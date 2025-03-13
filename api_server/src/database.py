@@ -1,16 +1,22 @@
 from typing import Any
 import psycopg2
 from psycopg2 import sql
-from sqlalchemy import create_engine, select, func, update, delete
+from sqlalchemy import create_engine, select, func, update, delete, between
 import numpy
 from sqlalchemy.orm import sessionmaker
 import os
-from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping, QuarterlyReportDates, ShortInterest
+from models import create_models, Company, CurrentQuarter, Volume, Universe, UniverseTickerMapping, QuarterlyReportDates, ShortInterest, StockPrice, IndexPrice
 from BaseModels import CreateUniverseRequestBody, DeleteUniverseRequestBody, EditUniverseRequestBody
 from parse_excel import parse_excel_sheet
 from parse_saas_hc import get_report_dates, get_ciq_ipo_dates, get_short_interest
 from fastapi import HTTPException
-
+import yfinance as yf
+import pandas as pd
+import datetime
+from sqlalchemy.dialects.postgresql import insert
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
 
 
 DEBUG = False
@@ -390,3 +396,422 @@ def run_migrations():
   populate_report_dates(engine)
 
   populate_short_interest(engine)
+
+
+def update_stock_data(symbols, index=None, days=60):
+    """
+    Update database with latest stock data from yfinance.
+    
+    Parameters:
+    -----------
+    symbols : str or list
+        Stock symbol(s) to update (e.g., 'AAPL' or ['AAPL', 'MSFT'])
+    index : str, optional
+        Index symbol to update (e.g., '^IXIC' for NASDAQ)
+    days : int
+        Number of days of historical data to fetch
+    """
+    # Convert single symbol to list for consistent handling
+    if isinstance(symbols, str):
+        symbols = [symbols]
+    
+    # Remove any index-like symbols from symbols list
+    stock_symbols = [s for s in symbols if not s.startswith('^')]
+    
+    # Gather all index symbols
+    index_symbols = [s for s in symbols if s.startswith('^')]
+    if index and index not in index_symbols:
+        index_symbols.append(index)
+
+    # Setup database connection
+    engine = create_database_engine()
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        # Process regular stocks
+        for symbol in stock_symbols:
+            print(f"Fetching data for stock: {symbol}...")
+            
+            # Get stock data from yfinance
+            try:
+                stock = yf.Ticker(symbol)
+                df = stock.history(period=f'{days}d')           
+                # Reset index to make Date a column
+                df = df.reset_index()
+                
+                # Insert or update data in database
+                for _, row in df.iterrows():
+                    # Format date to handle timezone info from yfinance
+                    date_str = row['Date'].strftime('%Y-%m-%d')
+                    
+                    # Create insert statement with on_conflict_do_update
+                    stmt = insert(StockPrice).values(
+                        stock_symbol=symbol,
+                        date=date_str,
+                        open_price=float(row['Open']),
+                        high_price=float(row['High']),
+                        low_price=float(row['Low']),
+                        close_price=float(row['Close']),
+                        volume=int(row['Volume']),
+                        adjusted_close=float(row.get('Adj Close', row['Close']))
+                    ).on_conflict_do_update(
+                        index_elements=['stock_symbol', 'date'],
+                        set_={
+                            'open_price': float(row['Open']),
+                            'high_price': float(row['High']),
+                            'low_price': float(row['Low']),
+                            'close_price': float(row['Close']),
+                            'volume': int(row['Volume']),
+                            'adjusted_close': float(row.get('Adj Close', row['Close'])),
+                            'created_at': func.current_timestamp()
+                        }
+                    )
+                    
+                    session.execute(stmt)
+                    
+                session.commit()
+                print(f"Successfully processed {len(df)} records for stock {symbol}")
+                
+            except Exception as e:
+                print(f"Error processing stock {symbol}: {e}")
+                session.rollback()
+                continue
+        
+        # Process index symbols separately
+        for idx_symbol in index_symbols:
+            print(f"Fetching data for index: {idx_symbol}...")
+            
+            try:
+                index_ticker = yf.Ticker(idx_symbol)
+                df = index_ticker.history(period=f'{days}d')
+                # Reset index to make Date a column
+                df = df.reset_index()
+                
+                # Insert or update data in database
+                for _, row in df.iterrows():
+                    # Format date to handle timezone info from yfinance
+                    date_str = row['Date'].strftime('%Y-%m-%d')
+                    
+                    # Create insert statement with on_conflict_do_update for IndexPrice
+                    stmt = insert(IndexPrice).values(
+                        index_symbol=idx_symbol,
+                        date=date_str,
+                        open_price=float(row['Open']),
+                        high_price=float(row['High']),
+                        low_price=float(row['Low']),
+                        close_price=float(row['Close']),
+                        adjusted_close=float(row.get('Adj Close', row['Close']))
+                    ).on_conflict_do_update(
+                        index_elements=['index_symbol', 'date'],
+                        set_={
+                            'open_price': float(row['Open']),
+                            'high_price': float(row['High']),
+                            'low_price': float(row['Low']),
+                            'close_price': float(row['Close']),
+                            'adjusted_close': float(row.get('Adj Close', row['Close'])),
+                            'created_at': func.current_timestamp()
+                        }
+                    )
+                    
+                    session.execute(stmt)
+                    
+                session.commit()
+                print(f"Successfully processed {len(df)} records for index {idx_symbol}")
+                
+            except Exception as e:
+                print(f"Error processing index {idx_symbol}: {e}")
+                session.rollback()
+                continue
+                
+        return {"status": "success", "message": f"Updated {len(stock_symbols)} stocks and {len(index_symbols)} indices"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update stock data: {str(e)}")
+    finally:
+        session.close()
+        engine.dispose()
+
+def calculate_stock_volatility(stock_symbol, start_date=None, end_date=None):
+    """
+    Calculate the volatility of a stock from the database.
+    
+    Parameters:
+    -----------
+    stock_symbol : str
+        The stock symbol to analyze (e.g., 'AAPL')
+    start_date : str, optional
+        Start date in 'YYYY-MM-DD' format. If None, uses 1 year before end_date
+    end_date : str, optional
+        End date in 'YYYY-MM-DD' format. If None, uses current date
+        
+    Returns:
+    --------
+    dict
+        Dictionary containing volatility metrics and base64 encoded plot
+    """
+    # Set default dates if not provided
+    if end_date is None:
+        end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    if start_date is None:
+        # Default to 1 year lookback
+        end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else end_date
+        start_dt = end_dt - datetime.timedelta(days=365)
+        start_date = start_dt.strftime('%Y-%m-%d')
+    
+    # Setup database connection
+    engine = create_database_engine()
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        # Check if it's an index symbol
+        if stock_symbol.startswith('^'):
+            # Query using IndexPrice for indices
+            stmt = select(IndexPrice.date, IndexPrice.close_price).where(
+                IndexPrice.index_symbol == stock_symbol,
+                IndexPrice.date >= start_date,
+                IndexPrice.date <= end_date
+            ).order_by(IndexPrice.date)
+        else:
+            # Query using StockPrice for stocks
+            stmt = select(StockPrice.date, StockPrice.close_price).where(
+                StockPrice.stock_symbol == stock_symbol,
+                StockPrice.date >= start_date,
+                StockPrice.date <= end_date
+            ).order_by(StockPrice.date)
+        
+        # Execute query and convert to DataFrame
+        result = session.execute(stmt)
+        df = pd.DataFrame(result.fetchall(), columns=['date', 'close_price'])
+        
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {stock_symbol} in the specified date range")
+        
+        # Calculate metrics
+        df['daily_return'] = df['close_price'].pct_change() * 100
+        df = df.dropna()
+        
+        daily_volatility = df['daily_return'].std()
+        mean_return = df['daily_return'].mean()
+        min_return = df['daily_return'].min()
+        max_return = df['daily_return'].max()
+        trading_days = len(df)
+        
+        # Generate plot
+        plt.figure(figsize=(10, 6))
+        plt.hist(df['daily_return'], bins=30, alpha=0.75)
+        plt.title(f"{stock_symbol} Daily Returns Distribution")
+        plt.xlabel("Daily Return (%)")
+        plt.ylabel("Frequency")
+        plt.axvline(mean_return, color='r', linestyle='dashed', linewidth=1)
+        plt.grid(True, alpha=0.3)
+        
+        # Convert plot to base64 image
+        img_buf = BytesIO()
+        plt.savefig(img_buf, format='png')
+        img_buf.seek(0)
+        img_base64 = base64.b64encode(img_buf.read()).decode('utf-8')
+        plt.close()
+        
+        results = {
+            'stock_symbol': stock_symbol,
+            'start_date': start_date if isinstance(start_date, str) else start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date if isinstance(end_date, str) else end_date.strftime('%Y-%m-%d'),
+            'trading_days': trading_days,
+            'daily_volatility': daily_volatility,
+            'mean_daily_return': mean_return,
+            'min_daily_return': min_return,
+            'max_daily_return': max_return,
+            'plot': img_base64
+        }
+        
+        return results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating volatility: {str(e)}")
+    finally:
+        session.close()
+        engine.dispose()
+
+def calculate_stock_correlation(stock_symbol, index=None, start_date=None, end_date=None):
+    """
+    Calculate the correlation between a stock and an index.
+    
+    Parameters:
+    -----------
+    stock_symbol : str
+        The stock symbol to analyze (e.g., 'AAPL')
+    index : str
+        The index to measure correlation against (e.g., '^IXIC')
+    start_date : str, optional
+        Start date in 'YYYY-MM-DD' format. If None, uses 1 year before end_date
+    end_date : str, optional
+        End date in 'YYYY-MM-DD' format. If None, uses current date
+        
+    Returns:
+    --------
+    dict
+        Dictionary containing correlation metrics and base64 encoded plot
+    """
+    # Set default dates if not provided
+    if end_date is None:
+        end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    if start_date is None:
+        # Default to 1 year lookback
+        end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else end_date
+        start_dt = end_dt - datetime.timedelta(days=365)
+        start_date = start_dt.strftime('%Y-%m-%d')
+    
+    if not index:
+        raise HTTPException(status_code=400, detail="Index symbol is required for correlation calculation")
+    
+    # Setup database connection
+    engine = create_database_engine()
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        # Get stock data
+        stock_stmt = select(StockPrice.date, StockPrice.close_price).where(
+            StockPrice.stock_symbol == stock_symbol,
+            StockPrice.date.between(start_date, end_date)
+        ).order_by(StockPrice.date)
+        
+        result = session.execute(stock_stmt)
+        stock_data = pd.DataFrame(result.fetchall(), columns=['date', 'price'])
+        
+        if stock_data.empty:
+            raise HTTPException(status_code=404, 
+                               detail=f"No data found for stock {stock_symbol} in the specified date range")
+        
+        # Get index data from IndexPrice table
+        index_stmt = select(IndexPrice.date, IndexPrice.close_price).where(
+            IndexPrice.index_symbol == index,
+            IndexPrice.date.between(start_date, end_date)
+        ).order_by(IndexPrice.date)
+        
+        result = session.execute(index_stmt)
+        index_data = pd.DataFrame(result.fetchall(), columns=['date', 'price'])
+        
+        if index_data.empty:
+            raise HTTPException(status_code=404, 
+                               detail=f"No data found for index {index} in the specified date range")
+        
+        # Merge dataframes on date
+        merged_data = pd.merge(stock_data, index_data, on='date', suffixes=('_stock', '_index'))
+        
+        # Calculate returns
+        merged_data['stock_return'] = merged_data['price_stock'].pct_change()
+        merged_data['index_return'] = merged_data['price_index'].pct_change()
+        merged_data = merged_data.dropna()
+        
+        if merged_data.empty:
+            raise HTTPException(status_code=404, detail="Insufficient data for correlation calculation")
+        
+        # Calculate correlation and beta
+        correlation = merged_data['stock_return'].corr(merged_data['index_return'])
+        covariance = merged_data['stock_return'].cov(merged_data['index_return'])
+        index_variance = merged_data['index_return'].var()
+        beta = covariance / index_variance if index_variance != 0 else None
+        
+        # Generate scatter plot
+        plt.figure(figsize=(10, 6))
+        plt.scatter(merged_data['index_return'], merged_data['stock_return'], alpha=0.5)
+        plt.xlabel(f"{index} Returns")
+        plt.ylabel(f"{stock_symbol} Returns")
+        plt.title(f"{stock_symbol} vs {index} Daily Returns\nBeta: {beta:.2f}, Correlation: {correlation:.2f}")
+        plt.grid(True, alpha=0.3)
+        
+        # Convert plot to base64 image
+        img_buf = BytesIO()
+        plt.savefig(img_buf, format='png')
+        img_buf.seek(0)
+        img_base64 = base64.b64encode(img_buf.read()).decode('utf-8')
+        plt.close()
+        
+        results = {
+            'stock_symbol': stock_symbol,
+            'index': index,
+            'start_date': start_date if isinstance(start_date, str) else start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date if isinstance(end_date, str) else end_date.strftime('%Y-%m-%d'),
+            'correlation': correlation,
+            'beta': beta,
+            'trading_days': len(merged_data),
+            'plot': img_base64
+        }
+        
+        return results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating correlation: {str(e)}")
+    finally:
+        session.close()
+        engine.dispose()
+
+def get_price_data(symbol: str, start_date: datetime, end_date: datetime):
+    """Get price data for a symbol between start and end dates"""
+    try:
+        # Try to get stock price data first
+        data = StockPrice.query.filter(
+            StockPrice.symbol == symbol,
+            StockPrice.date >= start_date,
+            StockPrice.date <= end_date
+        ).order_by(StockPrice.date).all()
+        
+        # If no stock data found, try index price data
+        if not data:
+            data = IndexPrice.query.filter(
+                IndexPrice.symbol == symbol,
+                IndexPrice.date >= start_date,
+                IndexPrice.date <= end_date
+            ).order_by(IndexPrice.date).all()
+        
+        return data
+    except Exception as e:
+        print(f"Error getting price data: {str(e)}")
+        return None
+
+def calculate_volatility(symbol: str, start_date: datetime, end_date: datetime):
+    """Calculate volatility for a symbol between start and end dates"""
+    price_data = get_price_data(symbol, start_date, end_date)
+    if not price_data:
+        return None
+    
+    # Extract closing prices
+    prices = [float(price.close) for price in price_data]
+    if len(prices) < 2:
+        return None
+    
+    # Calculate daily returns
+    returns = np.array([(prices[i] - prices[i-1])/prices[i-1] for i in range(1, len(prices))])
+    
+    # Calculate annualized volatility (assuming 252 trading days)
+    volatility = np.std(returns) * np.sqrt(252)
+    return float(volatility)
+
+def calculate_correlation(symbol1: str, symbol2: str, start_date: datetime, end_date: datetime):
+    """Calculate correlation between two symbols"""
+    data1 = get_price_data(symbol1, start_date, end_date)
+    data2 = get_price_data(symbol2, start_date, end_date)
+    
+    if not data1 or not data2:
+        return None
+    
+    # Create DataFrames with date and close price
+    df1 = pd.DataFrame([(d.date, float(d.close)) for d in data1], columns=['date', 'close'])
+    df2 = pd.DataFrame([(d.date, float(d.close)) for d in data2], columns=['date', 'close'])
+    
+    # Merge on date to ensure we only use dates present in both series
+    df = pd.merge(df1, df2, on='date', suffixes=('_1', '_2'))
+    
+    if len(df) < 2:
+        return None
+    
+    # Calculate correlation
+    correlation = df['close_1'].corr(df['close_2'])
+    return float(correlation)

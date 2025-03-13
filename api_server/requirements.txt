@@ -1,7 +1,8 @@
 psycopg2
-sqlAlchemy
+sqlalchemy
 fastapi
 pandas
+numpy
 openpyxl
 xlrd
 databases[postgresql]
@@ -10,3 +11,7 @@ pydantic
 yfinance
 python-multipart
 yahooquery
+matplotlib
+python-dateutil
+APScheduler
+pytz

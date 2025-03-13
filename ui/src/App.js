@@ -8,6 +8,7 @@ import UniverseListPage from './pages/UniverseListPage';
 import UniverseDetailPage from './pages/UniverseDetailPage';
 import CreateUniversePage from './pages/CreateUniversePage';
 import EditUniversePage from './pages/EditUniversePage';
+import StockAnalysisPage from './pages/StockAnalysisPage';
 
 
 const drawerWidth = 100;
@@ -21,9 +22,9 @@ const style={
 
 function App({ children }) {
   return (
-    <><LocalizationProvider dateAdapter={AdapterDayjs}>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
       {children}
-    </LocalizationProvider><Router>
+      <Router>
         <Box sx={{ display: 'flex' }}>
           <MenuSidebar style={style} />
           <Routes>
@@ -33,10 +34,12 @@ function App({ children }) {
             <Route path="/universes" element={<UniverseListPage style={style} />} />
             <Route path="/universe/:name" element={<UniverseDetailPage />} />
             <Route path="/edit_universe/:name" element={<EditUniversePage />} />
+            <Route path="/stock_analysis" element={<StockAnalysisPage style={style} />} />
             {/* Define other routes as needed */}
           </Routes>
         </Box>
-      </Router></>
+      </Router>
+    </LocalizationProvider>
   );
 }
 export default App;

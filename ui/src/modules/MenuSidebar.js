@@ -26,6 +26,9 @@ export default function MenuSidebar({style}) {
       case 2:
         navigate("/backtest_results");
         break;
+      case 3:
+        navigate("/stock_analysis");
+        break;
       default:
         break;
     }
@@ -34,7 +37,8 @@ export default function MenuSidebar({style}) {
   const menuList = [
     'Universes',
     'Create Universe',
-    'Backtest Results'
+    'Backtest Results',
+    'Stock Analysis'
   ];
 
   const drawer = (

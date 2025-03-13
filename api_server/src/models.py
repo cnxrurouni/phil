@@ -1,4 +1,4 @@
-from sqlalchemy import Column, CheckConstraint, Date, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, CheckConstraint, Date, Float, ForeignKey, Integer, String, UniqueConstraint, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import DATERANGE
 from enum import Enum
@@ -26,6 +26,43 @@ class Company(Base):
   name: Mapped[str] = mapped_column(String(50), unique=False, nullable=True)
   ipo_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)
   m_n_a_date: Mapped[datetime.date] = mapped_column(Date, nullable=True)
+
+
+class StockPrice(Base):
+  __tablename__ = 'stock_prices'
+  
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  stock_symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+  date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+  open_price: Mapped[float] = mapped_column(Float)
+  high_price: Mapped[float] = mapped_column(Float)
+  low_price: Mapped[float] = mapped_column(Float)
+  close_price: Mapped[float] = mapped_column(Float)
+  volume: Mapped[int] = mapped_column(Integer)
+  adjusted_close: Mapped[float] = mapped_column(Float)
+  created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
+  
+  __table_args__ = (
+      UniqueConstraint('stock_symbol', 'date', name='uix_stock_symbol_date'),
+  )
+
+
+class IndexPrice(Base):
+  __tablename__ = 'index_prices'
+  
+  id: Mapped[int] = mapped_column(Integer, primary_key=True)
+  index_symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+  date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+  open_price: Mapped[float] = mapped_column(Float)
+  high_price: Mapped[float] = mapped_column(Float)
+  low_price: Mapped[float] = mapped_column(Float)
+  close_price: Mapped[float] = mapped_column(Float)
+  adjusted_close: Mapped[float] = mapped_column(Float)
+  created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.utcnow)
+  
+  __table_args__ = (
+      UniqueConstraint('index_symbol', 'date', name='uix_index_symbol_date'),
+  )
 
 
 class Volume(Base):
