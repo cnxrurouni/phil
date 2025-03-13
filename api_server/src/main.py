@@ -8,7 +8,15 @@ from pydantic import BaseModel
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz
+import logging
+from pathlib import Path
 
+from Company import InstitutionalHolding, Session as DBSession
+from src.13f_parser import SEC13FParser
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Allow CORS for your frontend URL
 origins = [
@@ -33,6 +41,76 @@ class UpdateStockDataRequest(BaseModel):
     symbols: str  # comma-separated list of stock symbols
     index: Optional[str] = None
     days: Optional[int] = 60
+
+def get_quarter_info() -> tuple[str, str]:
+    """Get current quarter info and SEC index URL"""
+    now = datetime.now()
+    year = now.year
+    month = now.month
+    
+    if month <= 3:
+        quarter = f"12-31-{year-1}"
+        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR1/index.html"
+    elif month <= 6:
+        quarter = f"03-31-{year}"
+        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR2/index.html"
+    elif month <= 9:
+        quarter = f"06-30-{year}"
+        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR3/index.html"
+    else:
+        quarter = f"09-30-{year}"
+        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR4/index.html"
+    
+    return quarter, url
+
+async def update_13f_data(quarter: Optional[str] = None, force_update: bool = False):
+    """Update 13F holdings data for specified quarter or current quarter"""
+    try:
+        if quarter is None:
+            quarter, sec_url = get_quarter_info()
+        else:
+            # Determine URL based on provided quarter
+            date_parts = quarter.split('-')
+            year = date_parts[2]
+            month = int(date_parts[0])
+            qtr = (month // 3) + 1
+            sec_url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR{qtr}/index.html"
+
+        logger.info(f"Starting 13F update for quarter {quarter}")
+        
+        # Check if we already have data for this quarter
+        if not force_update:
+            with DBSession() as session:
+                existing_data = session.query(InstitutionalHolding).filter_by(quarter=quarter).first()
+                if existing_data:
+                    logger.info(f"Data already exists for quarter {quarter}. Skipping update.")
+                    return
+
+        parser = SEC13FParser(target_quarter=quarter)
+        parser.load_company_mappings()
+        parser.process_index_page(sec_url)
+        parser.cleanup()
+        
+        logger.info(f"Completed 13F update for quarter {quarter}")
+        
+    except Exception as e:
+        logger.error(f"Error updating 13F data: {e}")
+        raise
+
+def schedule_13f_updates():
+    """Schedule quarterly 13F updates"""
+    # Schedule updates to run on the 45th day after quarter end (typical 13F filing deadline)
+    scheduler.add_job(
+        update_13f_data,
+        CronTrigger(
+            month='2,5,8,11',  # February, May, August, November
+            day='14',          # 45 days after quarter end
+            hour='0',
+            minute='0',
+            timezone=pytz.UTC
+        ),
+        id='quarterly_13f_update'
+    )
 
 async def update_all_universe_data():
     """
@@ -114,6 +192,14 @@ async def startup_event():
         )
     )
     scheduler.start()
+    schedule_13f_updates()
+    
+    # Check if we need to run an initial update
+    quarter, _ = get_quarter_info()
+    with DBSession() as session:
+        existing_data = session.query(InstitutionalHolding).filter_by(quarter=quarter).first()
+        if not existing_data:
+            await update_13f_data(quarter)
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -275,3 +361,39 @@ def get_correlation():
         return jsonify({'correlation': correlation})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.get("/update_13f/{quarter}")
+async def manual_13f_update(quarter: str, background_tasks: BackgroundTasks, force: bool = False):
+    """
+    Manually trigger 13F update for a specific quarter
+    Quarter format: MM-DD-YYYY (e.g., 12-31-2024)
+    """
+    background_tasks.add_task(update_13f_data, quarter, force)
+    return {"message": f"Started 13F update for quarter {quarter}"}
+
+@app.get("/holdings/{ticker}")
+async def get_holdings(ticker: str, quarter: Optional[str] = None):
+    """Get institutional holdings for a specific ticker"""
+    with DBSession() as session:
+        query = session.query(InstitutionalHolding).filter_by(company_ticker=ticker)
+        if quarter:
+            query = query.filter_by(quarter=quarter)
+        holdings = query.all()
+        
+        return {
+            "ticker": ticker,
+            "quarter": quarter or "all",
+            "holdings": [
+                {
+                    "holder_name": h.holder_name,
+                    "shares": h.shares,
+                    "filing_date": h.filing_date.isoformat(),
+                    "quarter": h.quarter
+                }
+                for h in holdings
+            ]
+        }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

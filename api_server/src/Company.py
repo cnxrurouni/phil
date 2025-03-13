@@ -1,5 +1,27 @@
 from enum import IntEnum
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
 
+Base = declarative_base()
+
+class InstitutionalHolding(Base):
+    __tablename__ = 'institutional_holdings'
+    
+    id = Column(Integer, primary_key=True)
+    company_ticker = Column(String(10), index=True)
+    holder_name = Column(String(255))
+    shares = Column(Integer)
+    filing_date = Column(Date)
+    quarter = Column(String(10))  # Format: Q1-2024, Q2-2024, etc.
+    
+    def __repr__(self):
+        return f"<InstitutionalHolding(company={self.company_ticker}, holder={self.holder_name}, shares={self.shares}, quarter={self.quarter})>"
+
+# Initialize database connection
+engine = create_engine('sqlite:///company_data.db')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
 
 # row indexes for MRQ data
 class MRQ(IntEnum):
