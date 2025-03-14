@@ -6,18 +6,17 @@ import os
 
 Base = declarative_base()
 
-# class InstitutionalHolding(Base):
-#     __tablename__ = 'institutional_holdings'
+class InstitutionalHolding(Base):
+  __tablename__ = 'institutional_holdings'
+  id = Column(Integer, primary_key=True)
+  company_ticker = Column(String(10), index=True)
+  holder_name = Column(String(255))
+  shares = Column(Integer)
+  filing_date = Column(Date)
+  quarter = Column(String(10))  # Format: Q1-2024, Q2-2024, etc.
     
-#     id = Column(Integer, primary_key=True)
-#     company_ticker = Column(String(10), index=True)
-#     holder_name = Column(String(255))
-#     shares = Column(Integer)
-#     filing_date = Column(Date)
-#     quarter = Column(String(10))  # Format: Q1-2024, Q2-2024, etc.
-    
-#     def __repr__(self):
-#         return f"<InstitutionalHolding(company={self.company_ticker}, holder={self.holder_name}, shares={self.shares}, quarter={self.quarter})>"
+  def __repr__(self):
+    return f"<InstitutionalHolding(company={self.company_ticker}, holder={self.holder_name}, shares={self.shares}, quarter={self.quarter})>"
 
 # Initialize database connection using environment variables
 def create_database_engine():

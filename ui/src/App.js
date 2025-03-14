@@ -9,6 +9,7 @@ import UniverseDetailPage from './pages/UniverseDetailPage';
 import CreateUniversePage from './pages/CreateUniversePage';
 import EditUniversePage from './pages/EditUniversePage';
 import StockAnalysisPage from './pages/StockAnalysisPage';
+import Holdings13F from './pages/Holdings13F';
 
 
 const drawerWidth = 100;
@@ -35,6 +36,7 @@ function App({ children }) {
             <Route path="/universe/:name" element={<UniverseDetailPage />} />
             <Route path="/edit_universe/:name" element={<EditUniversePage />} />
             <Route path="/stock_analysis" element={<StockAnalysisPage style={style} />} />
+            <Route path="/holdings13f" element={<Holdings13F />} />
             {/* Define other routes as needed */}
           </Routes>
         </Box>

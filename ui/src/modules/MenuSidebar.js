@@ -29,6 +29,9 @@ export default function MenuSidebar({style}) {
       case 3:
         navigate("/stock_analysis");
         break;
+      case 4:
+        navigate("/holdings13f");
+        break;
       default:
         break;
     }
@@ -38,7 +41,8 @@ export default function MenuSidebar({style}) {
     'Universes',
     'Create Universe',
     'Backtest Results',
-    'Stock Analysis'
+    'Stock Analysis',
+    'Quarterly13F Holdings'
   ];
 
   const drawer = (
