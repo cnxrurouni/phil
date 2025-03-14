@@ -10,7 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 import logging
 from pathlib import Path
-# from Company import InstitutionalHolding, Session as DBSession
+from Company import InstitutionalHolding, Session as DBSession
 from parse_13F import SEC13FParser
 
 # Configure logging
@@ -352,32 +352,43 @@ async def get_stock_correlation(
 #     background_tasks.add_task(update_13F_data, quarter, force)
 #     return {"message": f"Started 13F update for quarter {quarter}"}
 
-# @app.get("/holdings/{ticker}")
-# async def get_holdings(ticker: str, quarter: Optional[str] = None):
-#     """Get institutional holdings for a specific ticker"""
-#     try:
-#         with DBSession() as session:
-#             query = session.query(InstitutionalHolding).filter_by(company_ticker=ticker)
-#             if quarter:
-#                 query = query.filter_by(quarter=quarter)
-#             holdings = query.all()
+@app.get("/holdings/{ticker}")
+async def get_holdings(
+    ticker: str,
+    quarter: Optional[str] = Query(None)
+):
+    """Get institutional holdings for a specific ticker and quarter"""
+    try:
+        with DBSession() as session:
+            query = session.query(InstitutionalHolding).filter_by(company_ticker=ticker)
             
-#            return {
-#                "ticker": ticker,
-#                "quarter": quarter or "all",
-#                "holdings": [
-#                    {
-#                        "holder_name": h.holder_name,
-#                        "shares": h.shares,
-#                        "filing_date": h.filing_date.isoformat(),
-#                        "quarter": h.quarter
-#                    }
-#                    for h in holdings
-#                ]
-#            }
-#    except Exception as e:
-#        logger.error(f"Error fetching holdings: {e}")
-#        raise HTTPException(status_code=500, detail="Failed to fetch holdings")
+            if quarter:
+                # Convert MM-DD-YYYY to Q#-YYYY format
+                date_parts = quarter.split('-')
+                month = int(date_parts[0])
+                year = date_parts[2]
+                q_num = ((month - 1) // 3) + 1
+                formatted_quarter = f"Q{q_num}-{year}"
+                query = query.filter_by(quarter=formatted_quarter)
+            
+            holdings = query.all()
+            
+            return {
+                "ticker": ticker,
+                "quarter": quarter or "all",
+                "holdings": [
+                    {
+                        "holder_name": h.holder_name,
+                        "shares": h.shares,
+                        "filing_date": h.filing_date.isoformat(),
+                        "quarter": h.quarter
+                    }
+                    for h in holdings
+                ]
+            }
+    except Exception as e:
+        logger.error(f"Error fetching holdings for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
