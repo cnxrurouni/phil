@@ -23,8 +23,8 @@ services:
   apiserver:
     build:
       dockerfile: api_server/Dockerfile.api
-    volumes:
-      - ./api_server/src:/app/api_server/src
+    volumes: #comment out to unmount
+      - ./api_server/src:/app/api_server/src #comment out to unmount
     working_dir: /app
     ports:
       - "8000:8000"
@@ -33,6 +33,7 @@ services:
       - PGUSER=admin
       - PGPASSWORD=password
       - PGDATABASE=phil
+      - PGPORT=5432
       - PYTHONPATH=/app/api_server/src
     depends_on:
       - db
@@ -46,7 +47,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: phil
     ports:
-      - "5433:5433"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data 
     networks:

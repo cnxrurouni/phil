@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from Company import InstitutionalHolding, Session as DBSession
 
 class SEC13FParser:
-    def __init__(self, target_quarter: str = None):
+    def __init__(self, target_quarter: str = None, current_quarter: str = None):
         self.headers = {
             'User-Agent': 'NoCap puppyia.o@gmail.com',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -22,10 +22,11 @@ class SEC13FParser:
         self.cusip_to_ticker: Dict[str, str] = {}
         self.filings_processed = 0
         self.start_time = None
-        self.target_quarter = target_quarter or self._get_current_quarter()
+        self.target_quarter = target_quarter or self._get_target_quarter()
+        self.current_quarter = current_quarter or self._get_current_quarter()
         self.db_session = DBSession()
 
-    def _get_current_quarter(self) -> str:
+    def _get_target_quarter(self) -> str:
         """Get the most recent completed quarter date in format MM-DD-YYYY"""
         now = datetime.now()
         year = now.year
@@ -39,6 +40,21 @@ class SEC13FParser:
             return f"06-30-{year}"    # Q2
         else:
             return f"09-30-{year}"    # Q3
+
+    def _get_current_quarter(self) -> str:
+        """Get the most recent completed quarter date in format MM-DD-YYYY"""
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        
+        if month <= 3:
+            return f"03-31-{year}"  
+        elif month <= 6:
+            return f"06-30-{year}"   
+        elif month <= 9:
+            return f"09-30-{year}"   
+        else:
+            return f"12-31-{year}"   
 
     def _validate_quarter_format(self, date_str: str) -> bool:
         """Validate if the date string matches the required quarter end format"""
@@ -62,17 +78,19 @@ class SEC13FParser:
 
     def load_company_mappings(self, ticker_file: str = '13FTickers.csv'):
         """Load CUSIP to ticker mappings"""
-        df = pd.read_csv(ticker_file)
-        self.cusip_to_ticker = dict(zip(df['Cusip'], df['Ticker']))
+        path = os.getcwd()
+        file_path = os.path.join(path, "api_server/src", ticker_file)
+        df = pd.read_csv(file_path)
+        self.cusip_to_ticker = dict(zip(df['Cusip'], df['Name']))
 
-    def process_13f_filing(self, url: str):
+    def process_13F_filing(self, url: str):
         """Process a single 13F-HR filing"""
         try:
             response = self.make_request(url)
             soup = BeautifulSoup(response.content, 'lxml')
             
-            filing_period = self._get_filing_period(soup)
-            if not self._validate_quarter_format(filing_period) or filing_period != self.target_quarter:
+            filing_period = str(self._get_filing_period(soup))
+            if not self._validate_quarter_format(filing_period) or filing_period != str(self.target_quarter):
                 return
                 
             manager_name = self._get_manager_name(soup)
@@ -85,11 +103,11 @@ class SEC13FParser:
                 if cusip in self.cusip_to_ticker:
                     ticker = self.cusip_to_ticker[cusip]
                     holding = InstitutionalHolding(
-                        company_ticker=ticker,
-                        holder_name=manager_name,
-                        shares=shares,
+                        company_ticker=str(ticker),
+                        holder_name=str(manager_name),
+                        shares=int(shares),  # Ensure shares is an integer
                         filing_date=filing_date,
-                        quarter=quarter
+                        quarter=str(quarter)  # Ensure quarter is a string
                     )
                     self.db_session.add(holding)
             
@@ -132,16 +150,19 @@ class SEC13FParser:
         """Determine if a file should be processed based on last run date"""
         if not self.target_quarter:
             return True
-        return file_date > self.target_quarter
+        # Ensure we're comparing strings
+        return str(file_date) > str(self.target_quarter)
 
     def process_index_page(self, url: str):
         """Process the quarterly index page to find daily company indices"""
         print("Starting to process SEC index page...")
         self.start_time = time.time()
-        
         response = self.make_request(url)
         soup = BeautifulSoup(response.content, 'lxml')
-        base_url = 'https://www.sec.gov/Archives/edgar/daily-index/2025/QTR1/'
+        base_url = url.replace('index.html', '')
+        print(url)
+        print(base_url)
+        #base_url = 'https://www.sec.gov/Archives/edgar/daily-index/2025/QTR1/'
         
         # Sort links by date to process in chronological order
         links = []
@@ -168,7 +189,7 @@ class SEC13FParser:
                 try:
                     filing_path = line.split('edgar/data/')[-1].split('.txt')[0] + '.txt'
                     filing_url = f'https://www.sec.gov/Archives/edgar/data/{filing_path}'
-                    self.process_13f_filing(filing_url)
+                    self.process_13F_filing(filing_url)
                     self.filings_processed += 1
                     self.print_progress()
                 except Exception as e:

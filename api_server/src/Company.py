@@ -2,26 +2,42 @@ from enum import IntEnum
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+import os
 
 Base = declarative_base()
 
-class InstitutionalHolding(Base):
-    __tablename__ = 'institutional_holdings'
+# class InstitutionalHolding(Base):
+#     __tablename__ = 'institutional_holdings'
     
-    id = Column(Integer, primary_key=True)
-    company_ticker = Column(String(10), index=True)
-    holder_name = Column(String(255))
-    shares = Column(Integer)
-    filing_date = Column(Date)
-    quarter = Column(String(10))  # Format: Q1-2024, Q2-2024, etc.
+#     id = Column(Integer, primary_key=True)
+#     company_ticker = Column(String(10), index=True)
+#     holder_name = Column(String(255))
+#     shares = Column(Integer)
+#     filing_date = Column(Date)
+#     quarter = Column(String(10))  # Format: Q1-2024, Q2-2024, etc.
     
-    def __repr__(self):
-        return f"<InstitutionalHolding(company={self.company_ticker}, holder={self.holder_name}, shares={self.shares}, quarter={self.quarter})>"
+#     def __repr__(self):
+#         return f"<InstitutionalHolding(company={self.company_ticker}, holder={self.holder_name}, shares={self.shares}, quarter={self.quarter})>"
 
-# Initialize database connection
-engine = create_engine('sqlite:///company_data.db')
-Base.metadata.create_all(engine)
+# Initialize database connection using environment variables
+def create_database_engine():
+    host = os.getenv('PGHOST', 'db')  # Default to 'db' for Docker service name
+    port = os.getenv('PGPORT', '5432')
+    user = os.getenv('PGUSER', 'admin')
+    password = os.getenv('PGPASSWORD', 'password')
+    database = os.getenv('PGDATABASE', 'phil')
+    
+    return create_engine(
+        f"postgresql://{user}:{password}@{host}:{port}/{database}",
+        pool_pre_ping=True  # Enable connection health checks
+    )
+
+# Create engine and session factory
+engine = create_database_engine()
 Session = sessionmaker(bind=engine)
+
+# Create tables
+Base.metadata.create_all(engine)
 
 # row indexes for MRQ data
 class MRQ(IntEnum):
@@ -108,7 +124,7 @@ class Z_SCORE(IntEnum):
 
 
 class Company:
-  def __INIT__(self):
+  def __init__(self):
     self.name = ""
     self.ticker = ""
 

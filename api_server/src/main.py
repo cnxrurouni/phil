@@ -10,9 +10,8 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 import logging
 from pathlib import Path
-
-from Company import InstitutionalHolding, Session as DBSession
-from src.13f_parser import SEC13FParser
+# from Company import InstitutionalHolding, Session as DBSession
+# from parse_13F import SEC13FParser
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,75 +41,93 @@ class UpdateStockDataRequest(BaseModel):
     index: Optional[str] = None
     days: Optional[int] = 60
 
-def get_quarter_info() -> tuple[str, str]:
-    """Get current quarter info and SEC index URL"""
-    now = datetime.now()
-    year = now.year
-    month = now.month
+# def get_quarter_info() -> tuple[str, str, str]:
+#     """Get current quarter info and SEC index URL"""
+#     now = datetime.now()
+#     year = now.year
+#     month = now.month
     
-    if month <= 3:
-        quarter = f"12-31-{year-1}"
-        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR1/index.html"
-    elif month <= 6:
-        quarter = f"03-31-{year}"
-        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR2/index.html"
-    elif month <= 9:
-        quarter = f"06-30-{year}"
-        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR3/index.html"
-    else:
-        quarter = f"09-30-{year}"
-        url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR4/index.html"
+#     if month <= 3:
+#         report_quarter = f"12-31-{year-1}"
+#         current_quarter = f"03-31-{year}"
+#         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR1/index.html"
+#     elif month <= 6:
+#         report_quarter = f"03-31-{year}"
+#         current_quarter = f"06-30-{year}"
+#         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR2/index.html"
+#     elif month <= 9:
+#         report_quarter = f"06-30-{year}"
+#         current_quarter = f"09-30-{year}"
+#         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR3/index.html"
+#     else:
+#         report_quarter = f"09-30-{year}"
+#         current_quarter = f"12-31-{year}"
+#         url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR4/index.html"
     
-    return quarter, url
+#     return report_quarter, current_quarter, url
 
-async def update_13f_data(quarter: Optional[str] = None, force_update: bool = False):
-    """Update 13F holdings data for specified quarter or current quarter"""
-    try:
-        if quarter is None:
-            quarter, sec_url = get_quarter_info()
-        else:
-            # Determine URL based on provided quarter
-            date_parts = quarter.split('-')
-            year = date_parts[2]
-            month = int(date_parts[0])
-            qtr = (month // 3) + 1
-            sec_url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR{qtr}/index.html"
+# async def update_13F_data(report_quarter: Optional[str] = None, current_quarter: Optional[str] = None, force_update: bool = False):
+#     """Update 13F holdings data for specified quarter or current quarter"""
+#     try:
+#         if report_quarter is None:
+#             report_quarter, current_quarter, sec_url = get_quarter_info()
+#             print(f"Updating for quarter {report_quarter}")
+#         else:
+#             # Determine URL based on provided quarter
+#             print(f"Using quarter {current_quarter}")
+#             date_parts = current_quarter.split('-')
+#             year = int(date_parts[2])
+#             month = int(date_parts[0])
+#             if month <= 3:
+#                 quarter = 1
+#             elif month <= 6:
+#                 quarter = 2
+#             elif month <= 9:
+#                 quarter = 3
+#             else:
+#                 quarter = 4
+#             sec_url = f"https://www.sec.gov/Archives/edgar/daily-index/{year}/QTR{quarter}/index.html"
 
-        logger.info(f"Starting 13F update for quarter {quarter}")
+#         logger.info(f"Starting 13F update for quarter {report_quarter}")
+#         logger.info(f"Parsing URLs from {sec_url}")
         
-        # Check if we already have data for this quarter
-        if not force_update:
-            with DBSession() as session:
-                existing_data = session.query(InstitutionalHolding).filter_by(quarter=quarter).first()
-                if existing_data:
-                    logger.info(f"Data already exists for quarter {quarter}. Skipping update.")
-                    return
+#         # Check if we already have data for this quarter
+#         if not force_update:
+#             with DBSession() as session:
+#                 existing_data = session.query(InstitutionalHolding).filter_by(quarter=str(quarter)).first()
+#                 if existing_data:
+#                     logger.info(f"Data already exists for quarter {report_quarter}. Skipping update.")
+#                     return
 
-        parser = SEC13FParser(target_quarter=quarter)
-        parser.load_company_mappings()
-        parser.process_index_page(sec_url)
-        parser.cleanup()
+#         parser = SEC13FParser(target_quarter=str(report_quarter), current_quarter=str(current_quarter) if current_quarter else None)
+#         logger.info("Parser initialized")
+#         parser.load_company_mappings()
+#         logger.info("Company mappings loaded")
+#         parser.process_index_page(sec_url)
+#         logger.info("Index page processed")
+#         parser.cleanup()
+#         logger.info("Cleanup complete")
         
-        logger.info(f"Completed 13F update for quarter {quarter}")
+#         logger.info(f"Completed 13F update for quarter {report_quarter}")
         
-    except Exception as e:
-        logger.error(f"Error updating 13F data: {e}")
-        raise
+#     except Exception as e:
+#         logger.error(f"Error updating 13F data: {e}")
+#         raise
 
-def schedule_13f_updates():
-    """Schedule quarterly 13F updates"""
-    # Schedule updates to run on the 45th day after quarter end (typical 13F filing deadline)
-    scheduler.add_job(
-        update_13f_data,
-        CronTrigger(
-            month='2,5,8,11',  # February, May, August, November
-            day='14',          # 45 days after quarter end
-            hour='0',
-            minute='0',
-            timezone=pytz.UTC
-        ),
-        id='quarterly_13f_update'
-    )
+# def schedule_13F_updates():
+#     """Schedule quarterly 13F updates"""
+#     # Schedule updates to run on the 45th day after quarter end (typical 13F filing deadline)
+#     scheduler.add_job(
+#         update_13F_data,
+#         CronTrigger(
+#             month='2,5,8,11',  # February, May, August, November
+#             day='14',          # 45 days after quarter end
+#             hour='0',
+#             minute='0',
+#             timezone=pytz.UTC
+#         ),
+#         id='quarterly_13F_update'
+#     )
 
 async def update_all_universe_data():
     """
@@ -154,8 +171,8 @@ async def startup_event():
     """
     Run when the FastAPI application starts
     """
-    # Initial update with more historical data
     try:
+        # Initial data update
         print("Performing initial data update...")
         universes = db.get_universes()
         if universes:
@@ -179,27 +196,20 @@ async def startup_event():
                 symbols=index_str,
                 days=60
             ))
-    except Exception as e:
-        print(f"Error during startup data update: {str(e)}")
 
-    # Schedule daily updates at market close (4:00 PM Eastern Time)
-    scheduler.add_job(
-        update_all_universe_data,
-        trigger=CronTrigger(
-            hour=16,  # 4 PM
-            minute=0,
-            timezone=pytz.timezone('America/New_York')
-        )
-    )
-    scheduler.start()
-    schedule_13f_updates()
-    
-    # Check if we need to run an initial update
-    quarter, _ = get_quarter_info()
-    with DBSession() as session:
-        existing_data = session.query(InstitutionalHolding).filter_by(quarter=quarter).first()
-        if not existing_data:
-            await update_13f_data(quarter)
+        # Start the scheduler
+        scheduler.start()
+        
+        # # Schedule 13F updates
+        # schedule_13F_updates()
+        
+        # # Check if we need to run an initial 13F update
+        # report_quarter, current_quarter, _ = get_quarter_info()
+        # await update_13F_data(report_quarter, current_quarter)
+        
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -214,9 +224,13 @@ async def read_root():
 
 @app.get("/tickers")
 async def read_tickers():
-    tickers = db.get_tickers()
-    return {"tickers": tickers}
-
+    """Get all available tickers"""
+    try:
+        tickers = db.get_tickers()
+        return {"tickers": tickers}
+    except Exception as e:
+        logger.error(f"Error fetching tickers: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch tickers")
 
 @app.post("/create_universe")
 async def create_universe(body: db.CreateUniverseRequestBody):
@@ -224,18 +238,15 @@ async def create_universe(body: db.CreateUniverseRequestBody):
     universe = db.post_create_universe(body)
     return {"universe": universe}
 
-
 @app.get("/get_universes")
 async def read_universes():
     universes = db.get_universes()
     return {"universes": universes}
 
-
 @app.put("/edit_universe/{universe_id}")
 def edit_universe(universe_id: int, body: db.EditUniverseRequestBody):
   universe = db.update_universe(universe_id, body)
   return {"universe": universe}
-
 
 @app.get("/measurement_periods", response_model=List[int])
 async def get_measurement_periods():
@@ -243,7 +254,6 @@ async def get_measurement_periods():
     Return the allowed measurement period values as a list of integers
     """
     return [period.value for period in MeasurementPeriodEnum]
-
 
 @app.delete("/delete_universes")
 async def delete_universes(body: db.DeleteUniverseRequestBody):
@@ -325,74 +335,78 @@ async def get_stock_correlation(
     )
     return result
 
-@app.route('/api/volatility', methods=['GET'])
-def get_volatility():
-    try:
-        symbol = request.args.get('symbol')
-        start_date = datetime.strptime(request.args.get('start_date'), '%Y-%m-%d')
-        end_date = datetime.strptime(request.args.get('end_date'), '%Y-%m-%d')
+#@app.route('/api/volatility', methods=['GET'])
+#def get_volatility():
+#    try:
+#        symbol = request.args.get('symbol')
+#        start_date = datetime.strptime(request.args.get('start_date'), '%Y-%m-%d')
+#        end_date = datetime.strptime(request.args.get('end_date'), '%Y-%m-%d')
         
-        if not symbol or not start_date or not end_date:
-            return jsonify({'error': 'Missing required parameters'}), 400
+#        if not symbol or not start_date or not end_date:
+#            return jsonify({'error': 'Missing required parameters'}), 400
         
-        volatility = calculate_volatility(symbol, start_date, end_date)
-        if volatility is None:
-            return jsonify({'error': f'No data found for symbol {symbol}'}), 404
+#        volatility = calculate_volatility(symbol, start_date, end_date)
+#        if volatility is None:
+#            return jsonify({'error': f'No data found for symbol {symbol}'}), 404
             
-        return jsonify({'volatility': volatility})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#        return jsonify({'volatility': volatility})
+#    except Exception as e:
+#        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/correlation', methods=['GET'])
-def get_correlation():
-    try:
-        symbol1 = request.args.get('symbol1')
-        symbol2 = request.args.get('symbol2')
-        start_date = datetime.strptime(request.args.get('start_date'), '%Y-%m-%d')
-        end_date = datetime.strptime(request.args.get('end_date'), '%Y-%m-%d')
+#@app.route('/api/correlation', methods=['GET'])
+#def get_correlation():
+#    try:
+#        symbol1 = request.args.get('symbol1')
+#        symbol2 = request.args.get('symbol2')
+#        start_date = datetime.strptime(request.args.get('start_date'), '%Y-%m-%d')
+#        end_date = datetime.strptime(request.args.get('end_date'), '%Y-%m-%d')
         
-        if not symbol1 or not symbol2 or not start_date or not end_date:
-            return jsonify({'error': 'Missing required parameters'}), 400
+ #       if not symbol1 or not symbol2 or not start_date or not end_date:
+ #           return jsonify({'error': 'Missing required parameters'}), 400
             
-        correlation = calculate_correlation(symbol1, symbol2, start_date, end_date)
-        if correlation is None:
-            return jsonify({'error': f'Insufficient data for correlation between {symbol1} and {symbol2}'}), 404
+ #       correlation = calculate_correlation(symbol1, symbol2, start_date, end_date)
+ #       if correlation is None:
+ #           return jsonify({'error': f'Insufficient data for correlation between {symbol1} and {symbol2}'}), 404
             
-        return jsonify({'correlation': correlation})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+ #       return jsonify({'correlation': correlation})
+ #   except Exception as e:
+ #       return jsonify({'error': str(e)}), 500
 
-@app.get("/update_13f/{quarter}")
-async def manual_13f_update(quarter: str, background_tasks: BackgroundTasks, force: bool = False):
-    """
-    Manually trigger 13F update for a specific quarter
-    Quarter format: MM-DD-YYYY (e.g., 12-31-2024)
-    """
-    background_tasks.add_task(update_13f_data, quarter, force)
-    return {"message": f"Started 13F update for quarter {quarter}"}
+# @app.get("/update_13F/{quarter}")
+# async def manual_13F_update(quarter: str, background_tasks: BackgroundTasks, force: bool = False):
+#     """
+#     Manually trigger 13F update for a specific quarter
+#     Quarter format: MM-DD-YYYY (e.g., 12-31-2024)
+#     """
+#     background_tasks.add_task(update_13F_data, quarter, force)
+#     return {"message": f"Started 13F update for quarter {quarter}"}
 
-@app.get("/holdings/{ticker}")
-async def get_holdings(ticker: str, quarter: Optional[str] = None):
-    """Get institutional holdings for a specific ticker"""
-    with DBSession() as session:
-        query = session.query(InstitutionalHolding).filter_by(company_ticker=ticker)
-        if quarter:
-            query = query.filter_by(quarter=quarter)
-        holdings = query.all()
-        
-        return {
-            "ticker": ticker,
-            "quarter": quarter or "all",
-            "holdings": [
-                {
-                    "holder_name": h.holder_name,
-                    "shares": h.shares,
-                    "filing_date": h.filing_date.isoformat(),
-                    "quarter": h.quarter
-                }
-                for h in holdings
-            ]
-        }
+# @app.get("/holdings/{ticker}")
+# async def get_holdings(ticker: str, quarter: Optional[str] = None):
+#     """Get institutional holdings for a specific ticker"""
+#     try:
+#         with DBSession() as session:
+#             query = session.query(InstitutionalHolding).filter_by(company_ticker=ticker)
+#             if quarter:
+#                 query = query.filter_by(quarter=quarter)
+#             holdings = query.all()
+            
+#            return {
+#                "ticker": ticker,
+#                "quarter": quarter or "all",
+#                "holdings": [
+#                    {
+#                        "holder_name": h.holder_name,
+#                        "shares": h.shares,
+#                        "filing_date": h.filing_date.isoformat(),
+#                        "quarter": h.quarter
+#                    }
+#                    for h in holdings
+#                ]
+#            }
+#    except Exception as e:
+#        logger.error(f"Error fetching holdings: {e}")
+#        raise HTTPException(status_code=500, detail="Failed to fetch holdings")
 
 if __name__ == "__main__":
     import uvicorn

@@ -4,6 +4,8 @@ FROM python:3.10
 ENV PGUSER=admin
 ENV PGPASSWORD=password
 ENV PGDATABASE=phil
+ENV PGHOST=db
+ENV PGPORT=5432
 ENV PYTHONPATH=/app/api_server/src
 
 # Set working directory
@@ -25,5 +27,14 @@ COPY ./api_server /app/api_server
 # Expose the port
 EXPOSE 8000
 
+# Add wait-for-it script to wait for database
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
 # Set the entrypoint
-ENTRYPOINT ["/bin/bash", "-c", "source /app/sqlAlchemy/bin/activate && python3 /app/api_server/src/create_database.py && /app/sqlAlchemy/bin/uvicorn api_server.src.main:app --host 0.0.0.0 --port 8000 --reload"]
+ENTRYPOINT ["/bin/bash", "-c", "\
+    source /app/sqlAlchemy/bin/activate && \
+    /wait-for-it.sh db:5432 -t 60 -- \
+    python3 /app/api_server/src/create_database.py && \
+    python3 -c 'from Company import Base, create_database_engine; Base.metadata.create_all(create_database_engine())' && \
+    /app/sqlAlchemy/bin/uvicorn api_server.src.main:app --host 0.0.0.0 --port 8000 --reload"]
